@@ -83,7 +83,9 @@ void setup() {
       new SpanAccessory(i+2);
         sprintf(channelNumbers[i],"Channel-%02d",i+1);
         new DEV_Identify(channelNumbers[i],"HomeSpan",channelNumbers[i],"Somfy RTS","1.1",0);
-        channels[i]=new DEV_Somfy(i);
+        channels[i]=new DEV_Somfy(i,30000);
+//        new Service::Switch();
+//        new Characteristic::On();
     }
   }  
 
