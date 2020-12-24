@@ -25,13 +25,15 @@
  *  
  ********************************************************************************/
 
+#include "HomeSpan.h" 
 #include <nvs_flash.h>
 
-nvs_handle somfyNVS;
 
-#include "HomeSpan.h" 
 #include "DEV_Identify.h"       
 #include "DEV_Somfy.h"     
+
+
+
 
 /*
 #define NUM_CHANNELS            5
@@ -74,8 +76,7 @@ void setup() {
      
   new SpanAccessory(3);
     new DEV_Identify("Large Window","HomeSpan","8143F9","Somfy RTS","1.1",0);
-    new DEV_Somfy(0x8143F9,10000);
-     
+    new DEV_Somfy(0x8143F9,10000);  
 
 } // end of setup()
 
@@ -84,6 +85,7 @@ void setup() {
 void loop(){
   
   homeSpan.poll();
+  DEV_Somfy::poll();
 
 /*
   if(deleteChannelButton.primed()){
