@@ -41,7 +41,7 @@ struct DEV_Somfy : Service::WindowCovering {
     this->ocTime=ocTime;                               // time (in milliseconds) to change from fully open or fully close
     current=new Characteristic::CurrentPosition(0);    // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)    
     target=new Characteristic::TargetPosition(0);      // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)
-    new SpanRange(0,100,10);
+//    new SpanRange(0,100,10);
     
     indicator=new Characteristic::ObstructionDetected(0);     // use this as a flag to indicate to user that this channel has been selected
 
@@ -137,32 +137,56 @@ struct DEV_Somfy : Service::WindowCovering {
 
   static void poll(){
 
-    if(progButton.triggered(5,4000)){
+    DEV_Somfy *ss=shadeList[selectedShade];
 
-      Serial.println("HERE");
-      Serial.println(selectedShade);
-      Serial.println(shadeList.size());
-      
+    if(progButton.triggered(5,4000)){
+     
       if(progButton.type()==PushButton::SINGLE){
-        if(selectedShade!=-1)
-          shadeList[selectedShade]->indicator->setVal(0);
-        selectedShade++;
-        if(selectedShade==shadeList.size())
-          selectedShade=-1;
-        if(selectedShade!=-1){
-          Serial.println("There");
-          shadeList[selectedShade]->indicator->setVal(1);
+        if(ss->indicator->getVal()){
+          ss->indicator->setVal(0);
+          selectedShade=(selectedShade+1)%shadeList.size();
+          ss=shadeList[selectedShade];
         }
-        
-      } // SINGLE
+        ss->indicator->setVal(1);
+        return;        
+      } // Single Press
       
-    } // PROG BUTTON
+      if(progButton.type()==PushButton::LONG){
+        ss->indicator->setVal(0);
+        ss->transmit(SOMFY_PROGRAM);
+        return;        
+      } // Long Press
+
+    } // progButton
+
+    if(upButton.triggered(5,1000) && upButton.type()==PushButton::SINGLE && ss->target->getVal()<100){
+      ss->target->setVal(100);
+      ss->indicator->setVal(0);
+      ss->update();
+    } else
+
+    if(downButton.triggered(5,1000) && downButton.type()==PushButton::SINGLE && ss->target->getVal()>0){
+      ss->target->setVal(0);
+      ss->indicator->setVal(0);
+      ss->update();
+    } else
+
+    if(myButton.triggered(5,1000) && downButton.type()==PushButton::SINGLE && ss->velocity!=0){
+      ss->indicator->setVal(0);
+      int estimatedPosition=ss->current->getVal<double>()+ss->velocity*double(millis()-ss->startTime);
+      if(estimatedPosition>100)
+        estimatedPosition=100;
+      else if(estimatedPosition<0)
+        estimatedPosition=0;
+      ss->target->setVal(estimatedPosition);
+      ss->loop();
+    }
 
   } // poll
   
 };
 
 vector<DEV_Somfy *> DEV_Somfy::shadeList;
-int DEV_Somfy::selectedShade=-1;
+int DEV_Somfy::selectedShade=0;
 
 ////////////////////////////////////
