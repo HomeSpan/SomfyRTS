@@ -25,16 +25,15 @@
  *  
  ********************************************************************************/
 
-int lastChannel=-1;
+#include <nvs_flash.h>
+
+nvs_handle somfyNVS;
 
 #include "HomeSpan.h" 
 #include "DEV_Identify.h"       
 #include "DEV_Somfy.h"     
 
-#include <nvs_flash.h>
-
-nvs_handle channelNVS;
-
+/*
 #define NUM_CHANNELS            5
 #define ADD_CHANNEL_BUTTON      23
 #define DELETE_CHANNEL_BUTTON   5
@@ -52,6 +51,7 @@ char modelName[20];
 PushButton addChannelButton(ADD_CHANNEL_BUTTON);
 PushButton deleteChannelButton(DELETE_CHANNEL_BUTTON);
 Blinker channelLED(CHANNEL_LED,1);
+*/
 
 void setup() {
  
@@ -61,33 +61,21 @@ void setup() {
 
   homeSpan.begin(Category::Bridges,"Somfy-HomeSpan");
 
-  size_t len;
-  nvs_open("CHANNELS",NVS_READWRITE,&channelNVS);
-  if(!nvs_get_blob(channelNVS,"CHANNELDATA",NULL,&len)){                        // channel data found
-    Serial.println("Found Somfy Channel Data");
-    nvs_get_blob(channelNVS,"CHANNELDATA",channelData,&len);
-  } else {
-    Serial.println("Creating Somfy Channel Data");
-    nvs_set_blob(channelNVS,"CHANNELDATA",channelData,sizeof(channelData));
-    nvs_commit(channelNVS);
-  }
+  nvs_open("SOMFY_DATA",NVS_READWRITE,&somfyNVS);
 
-  sprintf(modelName,"%d-Channel RTS",NUM_CHANNELS);
-  new SpanAccessory();  
-    new DEV_Identify("Somfy Controller","HomeSpan","123-ABC",modelName,"1.1",3);
+  new SpanAccessory(1);  
+    new DEV_Identify("Somfy Controller","HomeSpan","123-ABC","Multi-Channel RTS","1.1",3);
     new Service::HAPProtocolInformation();
       new Characteristic::Version("1.1.0");
 
-  for(int i=0;i<NUM_CHANNELS;i++){
-    if(channelData[i].active){
-      new SpanAccessory(i+2);
-        sprintf(channelNumbers[i],"Channel-%02d",i+1);
-        new DEV_Identify(channelNumbers[i],"HomeSpan",channelNumbers[i],"Somfy RTS","1.1",0);
-        channels[i]=new DEV_Somfy(i,30000);
-//        new Service::Switch();
-//        new Characteristic::On();
-    }
-  }  
+  new SpanAccessory(2);
+    new DEV_Identify("Screen Door","HomeSpan","E45A23","Somfy RTS","1.1",0);
+    new DEV_Somfy(0xE45A23,30000);
+     
+  new SpanAccessory(3);
+    new DEV_Identify("Large Window","HomeSpan","8143F9","Somfy RTS","1.1",0);
+    new DEV_Somfy(0x8143F9,10000);
+     
 
 } // end of setup()
 
@@ -97,6 +85,7 @@ void loop(){
   
   homeSpan.poll();
 
+/*
   if(deleteChannelButton.primed()){
     Serial.println("Delete-Channel Button Pressed...");
     channelLED.start(200,0.5,2,500);
@@ -149,5 +138,6 @@ void loop(){
     channelLED.off();
     addChannelButton.reset();
   } // add-channel button pressed
+*/
   
 } // end of loop()

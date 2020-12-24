@@ -3,6 +3,15 @@
 //     SOMFY RTS CONTROLLER       //
 ////////////////////////////////////
 
+char cBuf[128];
+
+#define SOMFY_STOP    0   
+#define SOMFY_RAISE   1
+#define SOMFY_LOWER   2
+#define SOMFY_PROGRAM 3
+
+char *label[]={"STOPPING","RAISING","LOWERING","PROGRAMMING"};
+
 struct DEV_Somfy : Service::WindowCovering {    
 
   SpanCharacteristic *current;
@@ -12,33 +21,37 @@ struct DEV_Somfy : Service::WindowCovering {
   double velocity=0;
   uint32_t startTime=0;
   uint32_t ocTime;
-  uint8_t channel;
+  uint32_t address;
+  char sAddr[11];
+  uint16_t rollingCode=0xFF;                                          // arbitrary starting code
   
-  DEV_Somfy(uint8_t channel, uint32_t ocTime) : Service::WindowCovering(){       // constructor() method
+  DEV_Somfy(uint32_t address, uint32_t ocTime) : Service::WindowCovering(){       // constructor() method
 
-    this->channel=channel;
+    this->address=address&0xFFFFFF;                    // Somfy address (use only lower 3 bytes)
     this->ocTime=ocTime;                               // time (in milliseconds) to change from fully open or fully close
     current=new Characteristic::CurrentPosition(0);    // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)    
     target=new Characteristic::TargetPosition(0);      // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)
     new SpanRange(0,100,10);
     
-    selected=new Characteristic::ObstructionDetected();     // use this as a flag to indicate to user that this channel has been selected for deletion
-       
-    Serial.print("Configuring Somfy Window Shade: Channel=");   // initialization message
-    Serial.print(channel+1);
-    Serial.print("  Open/Close Time=");
-    Serial.print(ocTime);
-    Serial.print(" (ms)\n");
+    selected=new Characteristic::ObstructionDetected();     // use this as a flag to indicate to user that this channel has been selected
+
+    sprintf(sAddr,"RTS-%02X%02X%02X", this->address>>16 & 0xFF, this->address>>8 & 0xFF, this->address & 0xFF);
+
+    size_t len;
+    
+    if(!nvs_get_blob(somfyNVS,sAddr,NULL,&len)){                        // Somfy address data found
+      nvs_get_blob(somfyNVS,sAddr,&rollingCode,&len);                   // use existing rolling code
+    } else {                                                            // new Somfy address
+      nvs_set_blob(somfyNVS,sAddr,&rollingCode,sizeof(rollingCode));    // set rolling code to starting code
+      nvs_commit(somfyNVS);
+    }
+
+    sprintf(cBuf,"Configuring Somfy Window Shade %s:  RollingCode=%04X  OpenCloseTime=%d ms\n",this->sAddr,rollingCode,this->ocTime);
+    Serial.print(cBuf);
 
   } // end constructor
 
   boolean update(){                              // update() method
-
-    LOG1("Somfy Channel ");
-    LOG1(channel+1);
-    LOG1(": ");
-
-    lastChannel=channel;
 
     int estimatedPosition;
 
@@ -50,8 +63,8 @@ struct DEV_Somfy : Service::WindowCovering {
       
     if(target->getNewVal() > estimatedPosition && velocity<=0){
 
-      LOG1("Raising Shade\n");     
-      
+      transmit(SOMFY_RAISE);
+           
       if(velocity<0)
         current->setVal(estimatedPosition);
         
@@ -62,7 +75,7 @@ struct DEV_Somfy : Service::WindowCovering {
     
     if(target->getNewVal() < estimatedPosition && velocity>=0){
 
-      LOG1("Lowering Shade\n");
+      transmit(SOMFY_LOWER);
 
       if(velocity>0)
         current->setVal(estimatedPosition);
@@ -91,12 +104,23 @@ struct DEV_Somfy : Service::WindowCovering {
     
     if((velocity>0 && estimatedPosition > targetPosition) || (velocity<0 && estimatedPosition < targetPosition)){
 
-      LOG1("Stopping Shade\n");
+      transmit(SOMFY_STOP);
+      
       current->setVal(target->getVal());
       velocity=0;
     }
     
   } // loop
+
+  void transmit(uint8_t action){
+
+    sprintf(cBuf,"** Somfy %s: %s  RC=%04X\n",sAddr,label[action],rollingCode++);
+    Serial.print(cBuf);
+
+    nvs_set_blob(somfyNVS,sAddr,&rollingCode,sizeof(rollingCode));    // save new rolling code
+    nvs_commit(somfyNVS);
+    
+  } // transmit
   
 };
 
