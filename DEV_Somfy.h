@@ -3,14 +3,17 @@
 //     SOMFY RTS CONTROLLER       //
 ////////////////////////////////////
 
+#include "extras/RFControl.h"
+#include "RFM69.h"
+
 char cBuf[128];                       // general string buffer for formatting output when needed
 
 nvs_handle somfyNVS;                  // handle to NVS to store rolling codes
 
-PushButton progButton(17);
-PushButton upButton(26);
-PushButton myButton(25);
-PushButton downButton(21);
+PushButton progButton(PROG_BUTTON);
+PushButton upButton(UP_BUTTON);
+PushButton myButton(MY_BUTTON);
+PushButton downButton(DOWN_BUTTON);
 
 #define SOMFY_STOP    0   
 #define SOMFY_RAISE   1
@@ -18,6 +21,11 @@ PushButton downButton(21);
 #define SOMFY_PROGRAM 3
 
 char *label[]={"STOPPING","RAISING","LOWERING","PROGRAMMING"};
+
+RFControl rf(RFM_SIGNAL_PIN);
+RFM69 rfm69(RFM_CHIP_SELECT,RFM_RESET_PIN);
+
+//////////////////////////////////////
 
 struct DEV_Somfy : Service::WindowCovering {    
 
@@ -34,6 +42,8 @@ struct DEV_Somfy : Service::WindowCovering {
 
   static vector<DEV_Somfy *> shadeList;        // store a list of all shades so we can scroll through selection with progButton
   static int selectedShade;                    // selected shade in shadeList
+
+//////////////////////////////////////
   
   DEV_Somfy(uint32_t address, uint32_t ocTime) : Service::WindowCovering(){       // constructor() method
 
@@ -41,7 +51,6 @@ struct DEV_Somfy : Service::WindowCovering {
     this->ocTime=ocTime;                               // time (in milliseconds) to change from fully open or fully close
     current=new Characteristic::CurrentPosition(0);    // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)    
     target=new Characteristic::TargetPosition(0);      // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)
-//    new SpanRange(0,100,10);
     
     indicator=new Characteristic::ObstructionDetected(0);     // use this as a flag to indicate to user that this channel has been selected
 
@@ -62,6 +71,8 @@ struct DEV_Somfy : Service::WindowCovering {
     shadeList.push_back(this);
 
   } // end constructor
+
+//////////////////////////////////////
 
   boolean update(){                              // update() method
 
@@ -100,6 +111,8 @@ struct DEV_Somfy : Service::WindowCovering {
   
   } // update
 
+//////////////////////////////////////
+
   void loop(){                                   // loop() method
 
     if(velocity==0)
@@ -125,15 +138,72 @@ struct DEV_Somfy : Service::WindowCovering {
     
   } // loop
 
+//////////////////////////////////////
+
   void transmit(uint8_t action){
 
-    sprintf(cBuf,"** Somfy %s: %s  RC=%04X\n",sAddr,label[action],rollingCode++);
-    Serial.print(cBuf);
+    rfm69.setRegister(0x01,0x0c);           // enable transmission mode
+    delay(10);
+  
+    sprintf(cBuf,"** Somfy %s: %s  RC=%04X\n",sAddr,label[action],++rollingCode);
+    LOG1(cBuf);
+
+    uint8_t b[7];
+  
+    b[0]=0xA0;
+    b[1]=1<<(4+action);
+    b[2]=rollingCode >> 8;
+    b[3]=rollingCode & 0xFF;
+    b[4]=(address >> 16) & 0xFF;
+    b[5]=(address >> 8) & 0xFF;
+    b[6]=(address) & 0xFF;
+  
+    uint8_t checkSum=0; 
+    for(int i=0;i<7;i++)
+     checkSum ^= b[i] ^ (b[i] >> 4);
+     
+    b[1] |= checkSum & 0x0F;  
+  
+    char c[64];
+    sprintf(c,"Transmitting: %02X %02X %02X %02X %02X %02X %02X\n",b[0],b[1],b[2],b[3],b[4],b[5],b[6]);
+    LOG1(c);
+  
+    for(int i=1;i<7;i++)
+      b[i] ^= b[i-1];
+  
+    sprintf(c,"Obfuscated:   %02X %02X %02X %02X %02X %02X %02X\n",b[0],b[1],b[2],b[3],b[4],b[5],b[6]);
+    LOG1(c);
+  
+    rf.clear();
+    
+    rf.add(2416,2416);
+    rf.add(2416,2416);
+    rf.add(4550,604);
+    
+    for(int i=0;i<7;i++){
+      for(int j=128;j>0;j=j>>1){
+        rf.phase(604,(b[i]&j)?0:1);
+        rf.phase(604,(b[i]&j)?1:0);
+      }
+    }
+  
+    rf.phase(30415,0);
+    rf.add(2416,2416);
+    rf.add(2416,2416);
+    rf.add(2416,2416);
+    rf.add(2416,2416);
+    rf.add(2416,2416);
+         
+    rf.start(3,1);
+
+    rfm69.setRegister(0x01,0x04);           // re-enter stand-by mode
 
     nvs_set_blob(somfyNVS,sAddr,&rollingCode,sizeof(rollingCode));    // save new rolling code
     nvs_commit(somfyNVS);
     
   } // transmit
+
+//////////////////////////////////////
 
   static void poll(){
 
@@ -186,7 +256,7 @@ struct DEV_Somfy : Service::WindowCovering {
   
 };
 
+////////////////////////////////////
+
 vector<DEV_Somfy *> DEV_Somfy::shadeList;
 int DEV_Somfy::selectedShade=0;
-
-////////////////////////////////////

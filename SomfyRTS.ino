@@ -25,35 +25,26 @@
  *  
  ********************************************************************************/
 
-#include "HomeSpan.h" 
+// Assign pins for the physical Somfy pushbuttons
+
+#define PROG_BUTTON   17      // must have a button to enable programming remote
+#define UP_BUTTON     26      // button is optional
+#define MY_BUTTON     25      // button is optional
+#define DOWN_BUTTON   21      // button is optional
+
+// Assign pins for RFM69 Transceiver
+
+#define RFM_SIGNAL_PIN    4       // this is the pin on which HomeSpan RFControl will generate a digital RF signal.  MUST be connected to the DIO2 pin on the RFM69
+#define RFM_CHIP_SELECT   33      // this is the pin used for SPI control.  MUST be connected to the SPI Chip Select pin on the RFM69
+#define RFM_RESET_PIN     27      // this is the pin used to reset the RFM.  MUST be connected to the RESET pin on the RFM69
+
+#define RF_FREQUENCY  433.42    // RF frequency (in MHz) for Somfy-RTS system
+
 #include <nvs_flash.h>
 
-
+#include "HomeSpan.h" 
 #include "DEV_Identify.h"       
-#include "DEV_Somfy.h"     
-
-
-
-
-/*
-#define NUM_CHANNELS            5
-#define ADD_CHANNEL_BUTTON      23
-#define DELETE_CHANNEL_BUTTON   5
-#define CHANNEL_LED             17
-
-struct { 
-  uint8_t active;
-  uint8_t pin;
-} channelData[NUM_CHANNELS]={{0,13},{0,12},{0,27},{0,33},{0,15}};
-
-DEV_Somfy *channels[NUM_CHANNELS];
-char channelNumbers[NUM_CHANNELS][11];
-char modelName[20];
-
-PushButton addChannelButton(ADD_CHANNEL_BUTTON);
-PushButton deleteChannelButton(DELETE_CHANNEL_BUTTON);
-Blinker channelLED(CHANNEL_LED,1);
-*/
+#include "DEV_Somfy.h"
 
 void setup() {
  
@@ -62,6 +53,9 @@ void setup() {
   homeSpan.setLogLevel(1);
 
   homeSpan.begin(Category::Bridges,"Somfy-HomeSpan");
+
+  rfm69.init();
+  rfm69.setFrequency(RF_FREQUENCY);
 
   nvs_open("SOMFY_DATA",NVS_READWRITE,&somfyNVS);
 
@@ -86,60 +80,5 @@ void loop(){
   
   homeSpan.poll();
   DEV_Somfy::poll();
-
-/*
-  if(deleteChannelButton.primed()){
-    Serial.println("Delete-Channel Button Pressed...");
-    channelLED.start(200,0.5,2,500);
-    channels[lastChannel]->selected->setVal(true);
-    return;
-  }
-
-  if(lastChannel>=0 && deleteChannelButton.triggered(3000,10000)){
-    if(deleteChannelButton.type()==PushButton::SINGLE){
-      Serial.println("Delete-Channel Button Cancelled");
-      channelLED.off();;
-      channels[lastChannel]->selected->setVal(false);
-    } else {
-      Serial.print("Deleting Channel ");
-      Serial.print(lastChannel);
-      Serial.println(" and restarting...");
-      channelLED.on();
-      channelData[lastChannel].active=0;
-      nvs_set_blob(channelNVS,"CHANNELDATA",channelData,sizeof(channelData));
-      nvs_commit(channelNVS);
-      delay(2000);
-      channelLED.off();
-      ESP.restart();
-    }
-  }
-
-  if(addChannelButton.triggered(9999,3000)){
-    Serial.print("Add-Channel Button Pressed...");
-
-    int nc;
-    for(nc=0;nc<NUM_CHANNELS && channelData[nc].active;nc++);
-    
-    if(nc<NUM_CHANNELS){
-      Serial.print("  Adding Channel: ");
-      Serial.println(nc+1);
-      channelLED.on();
-      channelData[nc].active=1;       
-      nvs_set_blob(channelNVS,"CHANNELDATA",channelData,sizeof(channelData));
-      nvs_commit(channelNVS);
-      delay(2000);
-      channelLED.off();
-      ESP.restart();
-      } else {
-      channelLED.start(200,0.5);
-      Serial.print("  Can't add any more new channels.  Max=");
-      Serial.println(NUM_CHANNELS);      
-    }
-    
-    addChannelButton.wait();
-    channelLED.off();
-    addChannelButton.reset();
-  } // add-channel button pressed
-*/
   
 } // end of loop()
