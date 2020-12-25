@@ -3,7 +3,6 @@
 
 #include <SPI.h>
 
-
 struct RFM69 {
 
   uint8_t csPin;

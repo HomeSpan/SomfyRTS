@@ -66,12 +66,8 @@ void setup() {
 
   new SpanAccessory(2);
     new DEV_Identify("Screen Door","HomeSpan","E45A23","Somfy RTS","1.1",0);
-    new DEV_Somfy(0xE45A23,30000);
+    new DEV_Somfy(0xE45A23,21000,19000);
      
-  new SpanAccessory(3);
-    new DEV_Identify("Large Window","HomeSpan","8143F9","Somfy RTS","1.1",0);
-    new DEV_Somfy(0x8143F9,10000);  
-
 } // end of setup()
 
 //////////////////////////////////////

@@ -35,7 +35,8 @@ struct DEV_Somfy : Service::WindowCovering {
    
   double velocity=0;
   uint32_t startTime=0;
-  uint32_t ocTime;
+  uint32_t raiseTime;
+  uint32_t lowerTime;
   uint32_t address;
   char sAddr[11];
   uint16_t rollingCode=0xFF;                   // arbitrary starting code
@@ -45,10 +46,11 @@ struct DEV_Somfy : Service::WindowCovering {
 
 //////////////////////////////////////
   
-  DEV_Somfy(uint32_t address, uint32_t ocTime) : Service::WindowCovering(){       // constructor() method
+  DEV_Somfy(uint32_t address, uint32_t raiseTime, uint32_t lowerTime) : Service::WindowCovering(){       // constructor() method
 
     this->address=address&0xFFFFFF;                    // Somfy address (use only lower 3 bytes)
-    this->ocTime=ocTime;                               // time (in milliseconds) to change from fully open or fully close
+    this->raiseTime=raiseTime;                         // time (in milliseconds) to fully open
+    this->lowerTime=lowerTime;                         // time (in milliseconds) to fully close
     current=new Characteristic::CurrentPosition(0);    // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)    
     target=new Characteristic::TargetPosition(0);      // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)
     
@@ -65,7 +67,7 @@ struct DEV_Somfy : Service::WindowCovering {
       nvs_commit(somfyNVS);
     }
 
-    sprintf(cBuf,"Configuring Somfy Window Shade %s:  RollingCode=%04X  OpenCloseTime=%d ms\n",this->sAddr,rollingCode,this->ocTime);
+    sprintf(cBuf,"Configuring Somfy Window Shade %s:  RollingCode=%04X  RaiseTime=%d ms  LowerTime=%d ms\n",this->sAddr,rollingCode,this->raiseTime,this->lowerTime);
     Serial.print(cBuf);
 
     shadeList.push_back(this);
@@ -91,7 +93,7 @@ struct DEV_Somfy : Service::WindowCovering {
       if(velocity<0)
         current->setVal(estimatedPosition);
         
-      velocity=100.0/ocTime;
+      velocity=100.0/raiseTime;
       startTime=millis();
       
     } else
@@ -103,7 +105,7 @@ struct DEV_Somfy : Service::WindowCovering {
       if(velocity>0)
         current->setVal(estimatedPosition);
         
-      velocity=-100.0/ocTime;
+      velocity=-100.0/lowerTime;
       startTime=millis();
     }
         
@@ -129,8 +131,15 @@ struct DEV_Somfy : Service::WindowCovering {
     
     if((velocity>0 && estimatedPosition > targetPosition) || (velocity<0 && estimatedPosition < targetPosition)){
 
-      if(targetPosition<100 && targetPosition>0)      // only transmit stop signal if stopping midway (neither fully open or closed)
+      if(targetPosition>100){
+        sprintf(cBuf,"** Somfy %s: Fully Open\n",sAddr);
+        LOG1(cBuf);
+      } else if(targetPosition<0){
+        sprintf(cBuf,"** Somfy %s: Fully Closed\n",sAddr);
+        LOG1(cBuf);
+      } else {
         transmit(SOMFY_STOP);
+      }
       
       current->setVal(target->getVal());
       velocity=0;
@@ -166,13 +175,13 @@ struct DEV_Somfy : Service::WindowCovering {
   
     char c[64];
     sprintf(c,"Transmitting: %02X %02X %02X %02X %02X %02X %02X\n",b[0],b[1],b[2],b[3],b[4],b[5],b[6]);
-    LOG1(c);
+    LOG2(c);
   
     for(int i=1;i<7;i++)
       b[i] ^= b[i-1];
   
     sprintf(c,"Obfuscated:   %02X %02X %02X %02X %02X %02X %02X\n",b[0],b[1],b[2],b[3],b[4],b[5],b[6]);
-    LOG1(c);
+    LOG2(c);
   
     rf.clear();
     
