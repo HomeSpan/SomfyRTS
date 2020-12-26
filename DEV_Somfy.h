@@ -58,15 +58,8 @@ struct DEV_Somfy : Service::WindowCovering {
 
     sprintf(sAddr,"RTS-%02X%02X%02X", this->address>>16 & 0xFF, this->address>>8 & 0xFF, this->address & 0xFF);
 
-    size_t len;
-    
-    if(!nvs_get_blob(somfyNVS,sAddr,NULL,&len)){                        // Somfy address data found
-      nvs_get_blob(somfyNVS,sAddr,&rollingCode,&len);                   // use existing rolling code
-    } else {                                                            // new Somfy address
-      nvs_set_blob(somfyNVS,sAddr,&rollingCode,sizeof(rollingCode));    // set rolling code to starting code
-      nvs_commit(somfyNVS);
-    }
-
+    nvs_get_u16(somfyNVS,sAddr,&rollingCode);          // get rolling code for this Somfy address, if it exists (otherwise initialized value above is used)
+   
     sprintf(cBuf,"Configuring Somfy Window Shade %s:  RollingCode=%04X  RaiseTime=%d ms  LowerTime=%d ms\n",this->sAddr,rollingCode,this->raiseTime,this->lowerTime);
     Serial.print(cBuf);
 
@@ -203,13 +196,12 @@ struct DEV_Somfy : Service::WindowCovering {
     rf.add(2416,2416);
     rf.add(2416,2416);
          
-    rf.start(3,1);
+    rf.start(3,1);                    // start transmission!  Repeat 3 times; Tick size=1 microseconds
 
-    rfm69.setRegister(0x01,0x04);           // re-enter stand-by mode
+    rfm69.setRegister(0x01,0x04);                 // re-enter stand-by mode
 
-    nvs_set_blob(somfyNVS,sAddr,&rollingCode,sizeof(rollingCode));    // save new rolling code
-    nvs_commit(somfyNVS);
-    
+    nvs_set_u16(somfyNVS,sAddr,rollingCode);      // save updated rolling
+       
   } // transmit
 
 //////////////////////////////////////
@@ -227,6 +219,8 @@ struct DEV_Somfy : Service::WindowCovering {
           ss=shadeList[selectedShade];
         }
         ss->indicator->setVal(1);
+        sprintf(cBuf,"** Somfy %s: Selected\n",ss->sAddr);
+        LOG1(cBuf);
         return;        
       } // Single Press
       
