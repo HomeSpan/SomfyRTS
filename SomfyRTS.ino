@@ -42,7 +42,7 @@
 
 #include <nvs_flash.h>
 
-// #define REQUIRED VERSION(1,1,2)
+#define REQUIRED VERSION(1,1,2)
 
 #include "HomeSpan.h" 
 #include "DEV_Identify.h"       
