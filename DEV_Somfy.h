@@ -20,7 +20,7 @@ PushButton downButton(DOWN_BUTTON);
 #define SOMFY_LOWER   2
 #define SOMFY_PROGRAM 3
 
-char *label[]={"STOPPING","RAISING","LOWERING","PROGRAMMING"};
+const char *label[]={"STOPPING","RAISING","LOWERING","PROGRAMMING"};
 
 RFControl rf(RFM_SIGNAL_PIN);
 RFM69 rfm69(RFM_CHIP_SELECT,RFM_RESET_PIN);

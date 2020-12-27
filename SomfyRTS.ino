@@ -30,7 +30,7 @@
 #define PROG_BUTTON   17      // must have a button to enable programming remote
 #define UP_BUTTON     26      // button is optional
 #define MY_BUTTON     25      // button is optional
-#define DOWN_BUTTON   21      // button is optional
+#define DOWN_BUTTON   23      // button is optional
 
 // Assign pins for RFM69 Transceiver
 
@@ -41,6 +41,8 @@
 #define RF_FREQUENCY  433.42    // RF frequency (in MHz) for Somfy-RTS system
 
 #include <nvs_flash.h>
+
+// #define REQUIRED VERSION(1,1,2)
 
 #include "HomeSpan.h" 
 #include "DEV_Identify.h"       
@@ -68,14 +70,6 @@ void setup() {
     new DEV_Identify("Screen Door","HomeSpan","E45A23","Somfy RTS","1.1",0);
     new DEV_Somfy(0xE45A23,21000,19000);
      
-  new SpanAccessory(3);
-    new DEV_Identify("Screen Door 2","HomeSpan","E45A23","Somfy RTS","1.1",0);
-    new DEV_Somfy(0x838485,21000,19000);
-
-  new SpanAccessory(4);
-    new DEV_Identify("Screen Door 3","HomeSpan","E45A23","Somfy RTS","1.1",0);
-    new DEV_Somfy(0x919293,21000,19000);
-
 } // end of setup()
 
 //////////////////////////////////////
