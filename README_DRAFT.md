@@ -28,6 +28,7 @@ Based on the **superb** work by [Pushstack](https://pushstack.wordpress.com/somf
 Apart from the obvious benefit of having HomeKit control of your Somfy shades and screens, our HomeSpan version of the Somfy remote also includes two additional benefits:
 
 * The remote allows for an arbitrary number of channels.  Have a 20 window shades spread across 5 rooms?  No problem - you can control all of them with this single device.
+
 * Use HomeKit to *set the absolute position of your window shade or screen!*  HomeKit natively supports a slider that allows you to specity the exact position of a window shade, from fully open (100%) to fully closed (0%) in increments of 1%.  Unfortunately, the Somfy RTS system does not generally support two way communications, nor do the motors transmit status about the position of the shade or screen.  However, some clever logic inside the sketch and a stopwatch is all that is needed to configure our HomeSpan remote to track and directly set the window shade to any position.
 
 
