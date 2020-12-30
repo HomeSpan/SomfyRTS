@@ -5,8 +5,8 @@ Hardware used for this project:
 
 * An ESP32 board, such as the [Adafruit HUZZAH32 – ESP32 Feather Board](https://www.adafruit.com/product/3405)
 * An RFM69 Transceiver, such as this [RFM69HCW FeatherWing](https://www.sparkfun.com/products/10534) from Adafruit
-* One small pushbutton (normally-open) to serve as both the Somfy PROG button and the channel selector button
-* Three large pushbuttons (normally-open) to serve as the Somfy UP, DOWN, and MY buttons.
+* One regular-size pushbutton (normally-open) to serve as both the Somfy PROG button and the channel selector button
+* Three regular-size pushbuttons (normally-open) to serve as the Somfy UP, DOWN, and MY buttons.
 * One small pushbutton (normally-open) to serve as the HomeSpan Control Button (optional)
 
 ### Overview
