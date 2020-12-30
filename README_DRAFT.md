@@ -52,6 +52,8 @@ You can of course use different pins for any of the above connections.  Just mak
 #define RFM_CHIP_SELECT   33      // this is the pin used for SPI control.  MUST be connected to the SPI Chip Select pin on the RFM69
 #define RFM_RESET_PIN     27      // this is the pin used to reset the RFM.  MUST be connected to the RESET pin on the RFM69
 ```
+NOTE:  If instead of using an RFM69 you decide to try a standard, non-programmable, 433.92 MHz transmiter, you can skip all the connections above except for the RF Signal which should still be connected from pin 4 on the ESP32 (or any alternative pin you chose) to the signal input pin of your transmitter.  The sketch will warn you that it cannot find the RFM69 when it first runs, but should work fine without modification.
+
 
 
 
