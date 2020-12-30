@@ -69,7 +69,16 @@ Each pushbutton used should be installed to connect a particular ESP32 pin to gr
 
 You can of course choose your own pins for any button provided you update the definitions accordingly.
 
-HomeSpan uses GPIO pin 21 as the default for connecting the Control Button, but this too can be changed by calling `homeSpan.setControlPin(pin)` somewhere at the top of the sketch *before* the `homeSpan.begin()`m and where *pin* is the GPIO pin you want to use.
+HomeSpan uses GPIO pin 21 as the default for connecting the HomeSpan Control Button, but this too can be changed by calling `homeSpan.setControlPin(pin)` somewhere at the top of the sketch *before* the call to `homeSpan.begin()`.
+
+### Configuring the Software and Specifying the Parameters for your Window Shades and Screens
+
+Apart from possibly changing the default pin definitions above, the only configuration required is to instantiate a Somfy Service for each window shade or screen you want to control, and specify a few parameters, using the CREATE_SOMFY macro as shown in the sketch:
+
+new SpanAccessory(2);
+  new DEV_Identify("Screen Door","HomeSpan","E45A23","Somfy RTS","1.0.1",0);
+  new DEV_Somfy(0xE45A23,21000,19000);
+```    
 
 
 
