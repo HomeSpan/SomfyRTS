@@ -35,7 +35,7 @@ Apart from the obvious benefit of having HomeKit control of your Somfy shades an
 
 In addition to an ESP32 board, our remote requires a "434 MHz" transmitter.  However, rather than using the standard carrier frequency of 433.92 MHz, Somfy RTS uses a carrier frequency of 433.42 MHz, which is 0.5 MHz lower than the standard.  Though it is possble to use a standard 433.92 MHz transmitter (such as the one used to construct a HomeSpan remote control for a [Zephyr Kitchen Vent Hood](https://github.com/HomeSpan/ZephyrVentHood)), there is no guarantee that the Somfy motor will accurately receive the RF signal, or that the range will allow for whole-home coverage.
 
-Instead, this project uses an RFM69 *programmable* 434 MHz transceiver that can be configured to transmit using a carrier frequency of 433.42 MHz to exactly match the Somfy RTS system.  The ESP32 communicates with the RFM69 via the ESP32's external SPI bus, which requires you to connect the MOSI, MISO, and SCK pins on your ESP32 to those same pins on your RFM69.  If you are using Adafruit's RFM69 FeatherWing with Adafruit's ESP32 Feather Board, these connections are already hardwired for you.  In addition, you'll need to make 3 other connections from "output" pins on the ESP32 to "input" pins on the RFM69:
+Instead, this project uses an RFM69 *programmable* 434 MHz transceiver that can be configured to use a carrier frequency of 433.42 MHz, which exactly matches the Somfy RTS system.  The ESP32 communicates with the RFM69 via the ESP32's external SPI bus, which requires you to connect the MOSI, MISO, and SCK pins on your ESP32 to those same pins on your RFM69.  If you are using Adafruit's RFM69 FeatherWing in combination with Adafruit's ESP32 Feather Board, these connections are already hardwired for you.  In addition, you'll need to make 3 other connections from "output" pins on the ESP32 to "input" pins on the RFM69:
 
 * The SPI Chip Select ("CS") Pin on the RMF69 needs to be connected to a pin on the ESP32 used to enable the RMF69 SPI bus.  This sketch uses GPIO pin 33 on the ESP32 for the RFM69 Chip Select.  If you are using the AdaFruit combination above, simply solder a jumper between the through-hole on the RFM69 FeatherWing labeled "CS" and the through-hole labeled "B" (which is conveniently hardwired to GPIO pin 33).
 
@@ -53,6 +53,25 @@ You can of course use different pins for any of the above connections.  Just mak
 #define RFM_RESET_PIN     27      // this is the pin used to reset the RFM.  MUST be connected to the RESET pin on the RFM69
 ```
 NOTE:  If instead of using an RFM69 you decide to try a standard, non-programmable, 433.92 MHz transmiter, you can skip all the connections above except for the RF Signal which should still be connected from pin 4 on the ESP32 (or any alternative pin you chose) to the signal input pin of your transmitter.  The sketch will warn you that it cannot find the RFM69 when it first runs, but should work fine without modification.
+
+Our HomeSpan Somfy remote also makes use of 5 pushbutton switches (4 are optional, 1 required).  The required pushbutton performs double-duty and serves as the Somfy PROG button as well as the device's channel selector.  Three additional pushbutton switches serve as the Somfy UP, DOWN, and MY buttons.  These are optional and only need to be installed if you want to control a window shade or screen manually with pushbuttons in addition to using HomeKit.  The final pushbutton is used as the HomeSpan control button, and is also optional since all of its functions can be accessed from the Arduino Serial Monitor if needed.
+
+Each pushbutton used should be installed to connect a particular ESP32 pin to ground.  HomeSpan takes case of debouncing the switches so no additional hardware is needed.  The pin definitions are defined in the sketch as follows:
+
+```C++
+// Assign pins for the physical Somfy pushbuttons
+
+#define PROG_BUTTON   17      // must have a button to enable programming remote
+#define UP_BUTTON     26      // button is optional
+#define MY_BUTTON     25      // button is optional
+#define DOWN_BUTTON   23      // button is optional
+```
+
+You can of course choose your own pins for any button provided you update the definitions accordingly.
+
+HomeSpan uses GPIO pin 21 as the default for connecting the Control Button, but this too can be changed by calling `homeSpan.setControlPin(pin)` somewhere at the top of the sketch *before* the `homeSpan.begin()`m and where *pin* is the GPIO pin you want to use.
+
+
 
 
 
