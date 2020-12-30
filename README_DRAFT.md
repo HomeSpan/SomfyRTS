@@ -9,7 +9,7 @@ Hardware used for this project:
 * Three large pushbuttons (normally-open) to serve as the Somfy UP, DOWN, and MY buttons.
 * One small pushbutton (normally-open) to serve as the HomeSpan Control Button (optional)
 
-# Overview
+### Overview
 
 Somfy motors are widely used in automated window shades, patios screens, and porch awnings.  And though there are many different models, almost all are controlled with a standardized system Somfy calls RTS, or [Radio Technology Somfy](https://asset.somfy.com/Document/dcb579ff-df8d-47d8-a288-01e06a4480ab_RTS_Brochure_5-2019.pdf) using Somfy RF controllers, such as the 5-channel [Somfy Tellis RTS](https://www.somfysystems.com/en-us/products/1810633/telis-rts).
 
@@ -29,7 +29,15 @@ Apart from the obvious benefit of having HomeKit control of your Somfy shades an
 
 * The remote allows for an arbitrary number of channels.  Have a 20 window shades spread across 5 rooms?  No problem - you can control all of them with this single device.
 
-* Use HomeKit to *set the absolute position of your window shade or screen!*  HomeKit natively supports a slider that allows you to specity the exact position of a window shade, from fully open (100%) to fully closed (0%) in increments of 1%.  Unfortunately, the Somfy RTS system does not generally support two way communications, nor do the motors transmit status about the position of the shade or screen.  However, some clever logic inside the sketch and a stopwatch is all that is needed to configure our HomeSpan remote to track and directly set the window shade to any position.
+* **Use HomeKit to set the absolute position of your window shade or screen!**  HomeKit natively supports a slider that allows you to specify the exact position of a window shade, from fully open (100%) to fully closed (0%) in increments of 1%.  Unfortunately, the Somfy RTS system does not generally support two way communications, nor do the motors transmit status about the position of the shade or screen.  However, some clever logic inside the sketch and a stopwatch is all that is needed to configure our HomeSpan remote to track and directly set the window shade to any position.
+
+### HomeSpan SomfyRTS Hardware
+
+In addition to an ESP32 board, our remote requires a "434 MHz" transmitter.  However, rather than using the standard carrier frequency of 433.92 MHz, Somfy RTS uses a carrier frequency of 433.42 MHz, which is 0.5 MHz lower than the standard.  Though it is possble to use a standard 433.92 MHz transmitter (such as the one used to construct a HomeSpan remote control for a [Zephyr Kitchen Vent Hood](https://github.com/HomeSpan/ZephyrVentHood)), there is no guarantee that the Somfy motor will accurately receive the RF signal, or that the range will allow for whole-home coverage.
+
+Instead, this project uses an RFM69 *programmable* 434 MHz transceiver that can be configured to transmit using a carrier frequency of 433.42 MHz to exactly match the Somfy RTS system.
+
+
 
 
 
