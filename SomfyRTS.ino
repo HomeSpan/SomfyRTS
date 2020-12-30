@@ -62,12 +62,12 @@ void setup() {
   nvs_open("SOMFY_DATA",NVS_READWRITE,&somfyNVS);
 
   new SpanAccessory(1);  
-    new DEV_Identify("Somfy Controller","HomeSpan","123-ABC","Multi-Channel RTS","1.1",3);
+    new DEV_Identify("Somfy Controller","HomeSpan","123-ABC","Multi-Channel RTS","1.0.1",3);
     new Service::HAPProtocolInformation();
       new Characteristic::Version("1.1.0");
 
   new SpanAccessory(2);
-    new DEV_Identify("Screen Door","HomeSpan","E45A23","Somfy RTS","1.1",0);
+    new DEV_Identify("Screen Door","HomeSpan","E45A23","Somfy RTS","1.0.1",0);
     new DEV_Somfy(0xE45A23,21000,19000);
      
 } // end of setup()
