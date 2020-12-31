@@ -38,10 +38,6 @@
 #define RFM_CHIP_SELECT   33      // this is the pin used for SPI control.  MUST be connected to the SPI Chip Select pin on the RFM69
 #define RFM_RESET_PIN     27      // this is the pin used to reset the RFM.  MUST be connected to the RESET pin on the RFM69
 
-#define RF_FREQUENCY  433.42    // RF frequency (in MHz) for Somfy-RTS system
-
-#include <nvs_flash.h>
-
 #define SKETCH_VERSION  "1.0.1"       // version of the Homespan SomfyRTS sketch
 #define REQUIRED VERSION(1,1,2)       // required version of the HomeSpan Library
 
@@ -57,23 +53,15 @@ void setup() {
 
   homeSpan.begin(Category::Bridges,"Somfy-HomeSpan");
 
-  rfm69.init();
-  rfm69.setFrequency(RF_FREQUENCY);
-
-  nvs_open("SOMFY_DATA",NVS_READWRITE,&somfyNVS);
+  DEV_Somfy::init();
 
   new SpanAccessory(1);  
     new DEV_Identify("Somfy Controller","HomeSpan","123-ABC","Multi-Channel RTS",SKETCH_VERSION,3);
     new Service::HAPProtocolInformation();
       new Characteristic::Version("1.1.0");
 
-  new SpanAccessory(2);
-    new DEV_Identify("Screen Door","HomeSpan","E45A23","Somfy RTS","1.0.1",0);
-    new DEV_Somfy(0xE45A23,21000,19000);
-
-  CREATE_CHANNEL(2,21000,19000);
-  CREATE_CHANNEL(0,1000,2000);
-
+  CREATE_CHANNEL(1,21000,19000);          // add Somfy Channel #1 with raiseTime=21000 ms and lowerTime=19000ms
+//  CREATE_CHANNEL(327,9000,8000);          // add Somfy Channel #327 with raiseTime=9000 ms and lowerTime=8000ms
      
 } // end of setup()
 
