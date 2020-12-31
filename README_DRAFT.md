@@ -143,7 +143,7 @@ Note that HomeSpan Somfy will track the position of the window shade whether you
 
 * Fully erasing the devices non-volatile-storage ("NVS") using the "E" command from within the [HomeSpan Command Line Interface](https://github.com/HomeSpan/HomeSpan/blob/master/docs/CLI.md), deletes all linkage information from the device.  Upon re-starting the sketch, all channels will need to be re-linked to a shade or screen.
 
-> Developer's note:  the NVS is used to store the Somfy rolling code for each Somfy channel address.  If the rolling codes are deleted, the Somfy addresses can't be used with the same shades since the rolling codes won't match (though they could be used with other shades).  To ensure you can re-link the same channel to the same shade, HomeSpan Somfy re-generates a new set of Somfy channel addresses upon re-start if the NVS is erased.  Technically, previoulsly-linked window shades and screen still retain knowledge of the prior linking, but this should have no effect on the operation of the shade.
+> Developer's note:  the NVS is used to store the Somfy rolling code for each Somfy channel address.  If the rolling codes are deleted, the Somfy addresses can't be used with the same shades since the rolling codes won't match (though they could be used with other shades).  To ensure you can re-link the same channel to the same shade, HomeSpan Somfy re-generates a new set of Somfy channel addresses upon re-start if the NVS is erased.  Technically, previously-linked window shades and screens still retain knowledge of the prior linking, but this should have no effect on the operation of the shade.  If you'd like to see the actual address assigned to any given channel, open the settings page for that channel's tile in the Home App. The original channel number should be listed under "Model" and the 3-byte Somfy address should be lited as the Serial Number
 
 ## Ideas, Options and Possibilities
 
@@ -155,7 +155,11 @@ Note that HomeSpan Somfy will track the position of the window shade whether you
 
 * Start a campaign to convince Apple to add a HomeKit option that allows a user to hold/stop a moving shade at its current position.  This feature is listed as a Service in HomeKit documentation, but it does not appear to be implemented in the Home App.
 
-* Add a display or 
+* Add a small OLED or 7-segment LED display to the device to provide a more direct indication of the selected channel.
+
+* Use (or create) a HomeKit-enabled sun-sensor to trigger HomeSpan Somfy to raise and lower shades
+
+
 
 
 
