@@ -157,8 +157,13 @@ Note that HomeSpan Somfy will track the position of the window shade whether you
 
 * Add a small OLED or 7-segment LED display to the device to provide a more direct indication of the selected channel.
 
-* Use (or create) a HomeKit-enabled sun-sensor to trigger HomeSpan Somfy to raise and lower shades
+* Use (or create) a HomeKit-enabled sun-sensor to trigger HomeSpan Somfy to raise and lower shades.
 
+---
+
+### Feedback or Questions?
+
+Please consider adding to the [Discussion Board](https://github.com/HomeSpan/HomeSpan/discussions), or email me directly at [homespan@icloud.com](mailto:homespan@icloud.com).
 
 
 
