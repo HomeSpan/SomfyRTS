@@ -93,3 +93,8 @@ CREATE_CHANNEL(0,11000,10000);          // BAD! Cannot use zero as a channel num
 
 You can add, remove, or modify your channel configuration at any time, even after HomeSpan Somfy has been paired with HomeKit.  Changes you make will automatically be reflected in the Home App on your iOS device.
 
+## Operating your HomeSpan Somfy Device
+
+HomeSpan Somfy is designed to operate just as any Somfy multi-channel remote, with the one exception that there are no LEDs or LCD displays to indicate which channel you have selected.  Instead, HomeSpan Somfy visually indicates the selected channel from within the Home App itself.  If you only have instantiated a single channel, there is nothing you need to select.  But if you created more than one channel, your next steps are to connect the device to your WiFi network and then pair the the device to HomeKit.  To so, follow the general instructions for all HomeSpan devices and configure the device either using the [HomeSpan Command Line Interface](https://github.com/HomeSpan/HomeSpan/blob/master/docs/CLI.md) or using the HomeSpan Control Button (if you've installed one above) as described in the [HomeSpan Users Guide](https://github.com/HomeSpan/HomeSpan/blob/master/docs/UserGuide.md).
+
+
