@@ -42,7 +42,8 @@
 
 #include <nvs_flash.h>
 
-#define REQUIRED VERSION(1,1,2)
+#define SKETCH_VERSION  "1.0.1"       // version of the Homespan SomfyRTS sketch
+#define REQUIRED VERSION(1,1,2)       // required version of the HomeSpan Library
 
 #include "HomeSpan.h" 
 #include "DEV_Identify.h"       
@@ -62,13 +63,17 @@ void setup() {
   nvs_open("SOMFY_DATA",NVS_READWRITE,&somfyNVS);
 
   new SpanAccessory(1);  
-    new DEV_Identify("Somfy Controller","HomeSpan","123-ABC","Multi-Channel RTS","1.0.1",3);
+    new DEV_Identify("Somfy Controller","HomeSpan","123-ABC","Multi-Channel RTS",SKETCH_VERSION,3);
     new Service::HAPProtocolInformation();
       new Characteristic::Version("1.1.0");
 
   new SpanAccessory(2);
     new DEV_Identify("Screen Door","HomeSpan","E45A23","Somfy RTS","1.0.1",0);
     new DEV_Somfy(0xE45A23,21000,19000);
+
+  CREATE_CHANNEL(2,21000,19000);
+  CREATE_CHANNEL(0,1000,2000);
+
      
 } // end of setup()
 

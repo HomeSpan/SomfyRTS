@@ -5,6 +5,7 @@
 
 #include "extras/RFControl.h"
 #include "RFM69.h"
+#include <sodium.h>
 
 char cBuf[128];                       // general string buffer for formatting output when needed
 
@@ -19,6 +20,8 @@ PushButton downButton(DOWN_BUTTON);
 #define SOMFY_RAISE   1
 #define SOMFY_LOWER   2
 #define SOMFY_PROGRAM 3
+
+#define NAME_FORMAT "Channel-%lu"
 
 const char *label[]={"STOPPING","RAISING","LOWERING","PROGRAMMING"};
 
@@ -257,7 +260,35 @@ struct DEV_Somfy : Service::WindowCovering {
 
   } // poll
   
-};
+////////////////////////////////////
+
+  static void createAddress(uint32_t channelNum, uint32_t *address, char **cName, char **cAddress){     // create a 3-byte Somfy RTS address and text strings from channel number
+
+  int nChars=snprintf(NULL,0,NAME_FORMAT,channelNum);
+  *cName=(char *)malloc(nChars+1);
+  sprintf(*cName,NAME_FORMAT,channelNum);
+  crypto_generichash((uint8_t *)address,4,(uint8_t *)*cName,strlen(*cName),NULL,0);
+  (*address)&=0xFFFFFF;
+  *cAddress=(char *)malloc(11);
+  sprintf(*cAddress,"RTS-%06X",*address);
+  
+  }
+
+////////////////////////////////////
+
+}; // DEV_Somfy()
+
+////////////////////////////////////
+
+#define CREATE_CHANNEL(channelNum,raiseTime,lowerTime) { \
+  char *textName; \
+  char *textAddress; \
+  uint32_t binAddress; \    
+  DEV_Somfy::createAddress(channelNum,&binAddress,&textName,&textAddress); \
+  new SpanAccessory(channelNum+1); \
+  new DEV_Identify(textName,"HomeSpan",textAddress,textName,SKETCH_VERSION,0); \
+  new DEV_Somfy(binAddress,raiseTime,lowerTime); \
+}
 
 ////////////////////////////////////
 
