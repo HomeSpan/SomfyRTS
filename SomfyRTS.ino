@@ -61,7 +61,6 @@ void setup() {
       new Characteristic::Version("1.1.0");
 
   CREATE_CHANNEL(1,21000,19000);          // add Somfy Channel #1 with raiseTime=21000 ms and lowerTime=19000ms
-//  CREATE_CHANNEL(327,9000,8000);          // add Somfy Channel #327 with raiseTime=9000 ms and lowerTime=8000ms
      
 } // end of setup()
 
