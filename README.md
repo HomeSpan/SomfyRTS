@@ -33,7 +33,7 @@ Apart from the obvious benefit of having HomeKit control of your Somfy shades an
 
 ## Constructing the Hardware
 
-In addition to an ESP32 board, HomeSpan Somfy requires a "434 MHz" transmitter.  However, rather than using a standard carrier frequency of 433.92 MHz, Somfy RTS uses a carrier frequency of 433.42 MHz, which is 0.5 MHz lower than the standard.  Though it is possble to use a standard 433.92 MHz transmitter (such as the one used to construct a HomeSpan remote control for a [Zephyr Kitchen Vent Hood](https://github.com/HomeSpan/ZephyrVentHood)), there is no guarantee that the Somfy motor will accurately receive the RF signal, or that the range will allow for whole-home coverage.
+In addition to an ESP32 board, HomeSpan Somfy requires a "433 MHz" transmitter.  However, rather than using a standard carrier frequency of 433.92 MHz, Somfy RTS uses a carrier frequency of 433.42 MHz, which is 0.5 MHz lower than the standard.  Though it is possble to use a standard 433.92 MHz transmitter (such as the one used to construct a HomeSpan remote control for a [Zephyr Kitchen Vent Hood](https://github.com/HomeSpan/ZephyrVentHood)), there is no guarantee that the Somfy motor will accurately receive the RF signal, or that the range will allow for whole-home coverage.
 
 Instead, this project uses an RFM69 *programmable* 434 MHz transceiver that can be configured to use a carrier frequency of 433.42 MHz to properly match the Somfy RTS system.  The ESP32 communicates with the RFM69 via the ESP32's external SPI bus.  This requires you to connect the MOSI, MISO, and SCK pins on your ESP32 to those same pins on your RFM69.  If you are using Adafruit's RFM69 FeatherWing in combination with Adafruit's ESP32 Feather Board, these connections are already hardwired for you.  You'll also need to make these 3 other connections between the ESP32 and the RFM69:
 
@@ -54,11 +54,11 @@ You can of course use different pins for any of the above connections.  Just mak
 ```
 NOTE:  If instead of using an RFM69 you decide to try a standard, non-programmable 433.92 MHz transmiter, you can skip all the connections above except for the RF Signal, which should still be connected from pin 4 on the ESP32 (or any alternative pin you chose) to the signal input pin of your transmitter.  The sketch will warn you that it cannot find the RFM69 when it first runs, but should work fine without modification.
 
-Finally, don't forget to solder an antenna wire (approximately 17 cm in length) to the antenna pad, pin, or through-hole on the RFM69.
+Finally, don't forget to solder an antenna wire (approximately 16.5cm in length) to the antenna pad, pin, or through-hole on the RFM69.
 
-Our HomeSpan Somfy remote also makes use of 5 pushbutton switches (4 are optional, 1 required).  The required pushbutton performs double-duty and serves as the Somfy PROG button as well as the device's channel selector.  Three additional pushbutton switches serve as the Somfy UP, DOWN, and MY buttons.  These are optional and only need to be installed if you want to control a window shade or screen manually with pushbuttons in addition to using HomeKit.  The final pushbutton is used as the HomeSpan control button, and is also optional since all of its functions can be accessed from the Arduino Serial Monitor if needed.
+The HomeSpan Somfy device also makes use of 5 pushbutton switches (4 are optional, 1 required).  The required pushbutton serves as both the Somfy PROG button as well as the device's channel SELECTOR button.  Three additional pushbutton switches serve as the Somfy UP, DOWN, and MY buttons.  These are optional and only need to be installed if you want to control a window shade or screen manually with pushbuttons in addition to using HomeKit.  The fifth pushbutton serves as the HomeSpan Control Button.  It is also optional since all of its functions can be alternatively accessed from the Arduino Serial Monitor using the [HomeSpan Command Line Interface](https://github.com/HomeSpan/HomeSpan/blob/master/docs/CLI.md).
 
-Each pushbutton used should be installed to connect a particular ESP32 pin to ground.  HomeSpan takes case of debouncing the switches so no additional hardware is needed.  The pin definitions are defined in the sketch as follows:
+Each pushbutton installed should connect a particular ESP32 pin (see below) to ground when pressed.  HomeSpan takes case of debouncing the pushbuttons so no additional hardware is needed.  The pin definitions for the HomeSpan Somfy device are defined in the sketch as follows:
 
 ```C++
 // Assign pins for the physical Somfy pushbuttons
@@ -75,27 +75,29 @@ HomeSpan uses GPIO pin 21 as the default for connecting the HomeSpan Control But
 
 ## Configuring the Software
 
-Apart from possibly changing the default pin definitions above, the only configuration required is to instantiate a Somfy Service for each window shade or screen you want to control, and specify a few parameters, using the CREATE_SOMFY macro:
+Apart from possibly changing the default pin definitions above, the only other configuration required is to instantiate a Somfy Service for each window shade or screen you want to control with the HomeSpan Somfy device, using the following CREATE_SOMFY macro:
 
 `CREATE_SOMFY(uint32_t channel, uint32_t raiseTime, uint32_t lowerTime`
 
-* *channel* - the channel number assigned to the window shade or screen.  Must be greater than zero and less than 2^32-1
+* *channel* - the channel number you want to assign to the window shade or screen.  Must be greater than zero and less than 2^32-1
 * *raiseTime* - the time it takes (in milliseconds) for the shade or screen to raise from fully closed to fully open
 * *lowerTime* - the time it takes (in milliseconds) for the shade or screen to lower from fully open to fully closed
 
-Call CREATE_SOMFY for each shade or screen you want to control with HomeSpan Somfy as such:
+Call the CREATE_SOMFY macro for each shade or screen you want to control with HomeSpan Somfy as such:
 
 ```C++
 CREATE_CHANNEL(1,21000,19000);          // assign a shade to Somfy Channel #1 with raiseTime=21000 ms and lowerTime=19000 ms
-CREATE_CHANNEL(2,11000,10000);          // assign a shade to Somfy Channel #2 with raiseTime=11000 ms and lowerTime=10000 ms
-CREATE_CHANNEL(607,11000,10000);        // assign a shade to Somfy Channel #607 (channel numbers do not need to be consecutive)
-CREATE_CHANNEL(14,11000,10000);         // assign a shade to Somfy Channel #14 (channel numbers do not need to be in any order)
-CREATE_CHANNEL(0,11000,10000);          // BAD! Cannot use zero as a channel number
+CREATE_CHANNEL(2,11000,10000);          // assign a second shade to Somfy Channel #2 with raiseTime=11000 ms and lowerTime=10000 ms
+CREATE_CHANNEL(607,11000,10000);        // assign a third shade to Somfy Channel #607 (channel numbers do not need to be consecutive)
+CREATE_CHANNEL(14,11000,10000);         // assign a fourth shade to Somfy Channel #14 (channel numbers do not need to be in any order)
+
+CREATE_CHANNEL(2,5000,3000);            // BAD! Cannot re-use channel numbers within one HomeSpan Somfy device.  Will throw a run-time error.
+CREATE_CHANNEL(0,11000,10000);          // BAD! Cannot use zero as a channel number.  Will throw a run-time error.
 ```
 
 You can add, remove, or modify your channel configuration at any time, even after HomeSpan Somfy has been paired with HomeKit.  Changes you make will automatically be reflected in the Home App on your iOS device.
 
-## Configuring your HomeSpan Somfy Device and Linking to Window Shades/Screens
+## Operating your HomeSpan Somfy Device and Linking to Window Shades/Screens
 
 HomeSpan Somfy is designed to operate just as any Somfy multi-channel remote, with the one exception that there are no LEDs or LCD displays to indicate which channel you have selected.  Instead, HomeSpan Somfy visually indicates the selected channel from within the Home App itself.  If you only have instantiated a single channel, there is nothing you need to select, and you can (temporarily) skip the next steps.  But if you created more than one channel, your next steps are to connect the device to your WiFi network and then pair the the device to HomeKit.  To so, follow the general instructions for all HomeSpan devices and configure the device either using the [HomeSpan Command Line Interface](https://github.com/HomeSpan/HomeSpan/blob/master/docs/CLI.md) or using the HomeSpan Control Button (if you've installed one above) as described in the [HomeSpan User Guide](https://github.com/HomeSpan/HomeSpan/blob/master/docs/UserGuide.md).
 
