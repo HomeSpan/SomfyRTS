@@ -77,6 +77,8 @@ If using the Adafruit RFM69 FeatherWing, this is what the default wiring above w
 
 ![RFM69 Wiring](images/RFM69.png)
 
+Note this diagram includes an optional LED wired to the signal pin that will flash whenever the RFM69 transmits data.
+
 ## Configuring the Software
 
 Apart from possibly changing the default pin definitions above, the only other configuration required is to instantiate a Somfy Service for each window shade or screen you want to control with the HomeSpan Somfy device, using the following CREATE_SOMFY macro:
