@@ -169,9 +169,6 @@ Note that HomeSpan Somfy will track the position of the window shade whether you
 
 * Expand the functionality of HomeSpan's embedded web server (which is optionally used to configure a device's WiFi credentials and HomeKit Setup Pairing Code) to allow the creation/modification/deletion of Somfy channels *without the need to ever open the sketch or use the CREATE_SOMFY() macro*.
 
-
-![RFM69 Wiring](images/RFM69.png)
-
 ---
 
 ### Feedback or Questions?
