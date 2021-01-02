@@ -73,6 +73,10 @@ You can of course choose your own pins for any button provided you update the de
 
 HomeSpan uses GPIO pin 21 as the default for connecting the HomeSpan Control Button, but this too can be changed by calling `homeSpan.setControlPin(pin)` somewhere at the top of the sketch *before* the call to `homeSpan.begin()`.
 
+If using the Adafruit RFM69 FeatherWing, this is what the default wiring above will look like:
+
+![RFM69 Wiring](images/RFM69.png)
+
 ## Configuring the Software
 
 Apart from possibly changing the default pin definitions above, the only other configuration required is to instantiate a Somfy Service for each window shade or screen you want to control with the HomeSpan Somfy device, using the following CREATE_SOMFY macro:
