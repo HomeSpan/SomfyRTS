@@ -27,10 +27,9 @@
 
 // Assign pins for the physical Somfy pushbuttons
 
-#define PROG_BUTTON   17      // must have a button to enable programming remote
-#define UP_BUTTON     26      // button is optional
-#define MY_BUTTON     25      // button is optional
-#define DOWN_BUTTON   23      // button is optional
+#define UP_BUTTON     26
+#define MY_BUTTON     25
+#define DOWN_BUTTON   23
 
 // Assign pins for RFM69 Transceiver
 
@@ -38,7 +37,7 @@
 #define RFM_CHIP_SELECT   33      // this is the pin used for SPI control.  MUST be connected to the SPI Chip Select pin on the RFM69
 #define RFM_RESET_PIN     27      // this is the pin used to reset the RFM.  MUST be connected to the RESET pin on the RFM69
 
-#define SKETCH_VERSION  "1.0.1"       // version of the Homespan SomfyRTS sketch
+#define SKETCH_VERSION  "1.1.0"       // version of the Homespan SomfyRTS sketch
 #define REQUIRED VERSION(1,1,2)       // required version of the HomeSpan Library
 
 #include "HomeSpan.h" 
@@ -50,6 +49,7 @@ void setup() {
   Serial.begin(115200);
 
   homeSpan.setLogLevel(1);
+  homeSpan.setControlPin(MY_BUTTON);
 
   homeSpan.begin(Category::Bridges,"Somfy-HomeSpan");
 

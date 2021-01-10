@@ -10,7 +10,6 @@
 
 char cBuf[128];                       // general string buffer for formatting output when needed
 
-PushButton progButton(PROG_BUTTON);
 PushButton upButton(UP_BUTTON);
 PushButton myButton(MY_BUTTON);
 PushButton downButton(DOWN_BUTTON);
@@ -219,9 +218,46 @@ struct DEV_Somfy : Service::WindowCovering {
 
     DEV_Somfy *ss=shadeList[selectedShade];
 
-    if(progButton.triggered(5,4000)){
-     
-      if(progButton.type()==PushButton::SINGLE){
+    if(upButton.triggered(5,2000)){
+      
+      if(upButton.type()==PushButton::LONG && downButton.primed()){
+        ss->indicator->setVal(0);
+        ss->transmit(SOMFY_PROGRAM);
+        downButton.wait();
+        downButton.reset();        
+        upButton.wait();        
+        upButton.reset();        
+      } else
+
+      if(upButton.type()==PushButton::SINGLE && ss->target->getVal()<100){
+        ss->target->setVal(100);
+        ss->indicator->setVal(0);
+        ss->update();
+      }
+
+    } else
+
+    if(downButton.triggered(5,2000)){
+      
+      if(downButton.type()==PushButton::LONG && upButton.primed()){
+        ss->indicator->setVal(0);
+        ss->transmit(SOMFY_PROGRAM);
+        downButton.wait();
+        downButton.reset();        
+        upButton.wait();        
+        upButton.reset();        
+      } else
+
+      if(downButton.type()==PushButton::SINGLE && ss->target->getVal()>0){
+        ss->target->setVal(0);
+        ss->indicator->setVal(0);
+        ss->update();
+      }
+      
+    } else
+
+    if(myButton.triggered(5,1000,200)){
+      if(myButton.type()==PushButton::DOUBLE){
         if(ss->indicator->getVal()){
           ss->indicator->setVal(0);
           selectedShade=(selectedShade+1)%shadeList.size();
@@ -230,38 +266,19 @@ struct DEV_Somfy : Service::WindowCovering {
         ss->indicator->setVal(1);
         sprintf(cBuf,"** Somfy %s: Selected\n",ss->sName);
         LOG1(cBuf);
-        return;        
-      } // Single Press
+        
+      } else
       
-      if(progButton.type()==PushButton::LONG){
+      if(myButton.type()==PushButton::SINGLE && ss->velocity!=0){
         ss->indicator->setVal(0);
-        ss->transmit(SOMFY_PROGRAM);
-        return;        
-      } // Long Press
-
-    } // progButton
-
-    if(upButton.triggered(5,1000) && upButton.type()==PushButton::SINGLE && ss->target->getVal()<100){
-      ss->target->setVal(100);
-      ss->indicator->setVal(0);
-      ss->update();
-    } else
-
-    if(downButton.triggered(5,1000) && downButton.type()==PushButton::SINGLE && ss->target->getVal()>0){
-      ss->target->setVal(0);
-      ss->indicator->setVal(0);
-      ss->update();
-    } else
-
-    if(myButton.triggered(5,1000) && downButton.type()==PushButton::SINGLE && ss->velocity!=0){
-      ss->indicator->setVal(0);
-      int estimatedPosition=ss->current->getVal<double>()+ss->velocity*double(millis()-ss->startTime);
-      if(estimatedPosition>100)
-        estimatedPosition=100;
-      else if(estimatedPosition<0)
-        estimatedPosition=0;
-      ss->target->setVal(estimatedPosition);
-      ss->loop();
+        int estimatedPosition=ss->current->getVal<double>()+ss->velocity*double(millis()-ss->startTime);
+        if(estimatedPosition>100)
+          estimatedPosition=100;
+        else if(estimatedPosition<0)
+          estimatedPosition=0;
+        ss->target->setVal(estimatedPosition);
+        ss->loop();
+      }
     }
 
   } // poll
