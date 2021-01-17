@@ -26,9 +26,12 @@
  ********************************************************************************/
 
 // Assign pins for the physical Somfy pushbuttons
+// A LONG press of the MY_BUTTON serves as the HomeSpan Control Button
+// A DOUBLE press of the MY_BUTTON serve as Shade Selector
+// A simultaneous LONG press of both the UP and DOWN Buttons serve as the Somfy PROG Button
 
-#define UP_BUTTON     26
-#define MY_BUTTON     25
+#define UP_BUTTON     26         
+#define MY_BUTTON     25   
 #define DOWN_BUTTON   23
 
 // Assign pins for RFM69 Transceiver

@@ -42,6 +42,7 @@ struct DEV_Somfy : Service::WindowCovering {
   uint32_t raiseTime;
   uint32_t lowerTime;
   uint32_t address;
+  boolean recalibrate=false;
   char *sName;
   char *sAddr;
   uint16_t rollingCode=0xFF;                   // arbitrary starting code
@@ -144,6 +145,7 @@ struct DEV_Somfy : Service::WindowCovering {
       
       current->setVal(target->getVal());
       velocity=0;
+      recalibrate=false;
     }
     
   } // loop
@@ -218,15 +220,27 @@ struct DEV_Somfy : Service::WindowCovering {
 
     DEV_Somfy *ss=shadeList[selectedShade];
 
-    if(upButton.triggered(5,2000)){
+    if(upButton.triggered(5,2000,200)){
       
-      if(upButton.type()==PushButton::LONG && downButton.primed()){
-        ss->indicator->setVal(0);
-        ss->transmit(SOMFY_PROGRAM);
-        downButton.wait();
-        downButton.reset();        
-        upButton.wait();        
-        upButton.reset();        
+      if(upButton.type()==PushButton::LONG){
+        if(downButton.primed()){
+          ss->indicator->setVal(0);
+          ss->transmit(SOMFY_PROGRAM);
+          downButton.wait();
+          downButton.reset();        
+          upButton.wait();        
+          upButton.reset();
+        } else {
+          ss->target->setVal(100);
+          ss->indicator->setVal(0);
+          ss->raiseTime=120000;
+          ss->update();
+          LOG1("** Preparing to Reset Raise Time\n");
+          ss->recalibrate=true;
+          upButton.wait();
+          upButton.reset();
+        }
+        
       } else
 
       if(upButton.type()==PushButton::SINGLE && ss->target->getVal()<100){
@@ -237,15 +251,27 @@ struct DEV_Somfy : Service::WindowCovering {
 
     } else
 
-    if(downButton.triggered(5,2000)){
+    if(downButton.triggered(5,2000,200)){
       
-      if(downButton.type()==PushButton::LONG && upButton.primed()){
-        ss->indicator->setVal(0);
-        ss->transmit(SOMFY_PROGRAM);
-        downButton.wait();
-        downButton.reset();        
-        upButton.wait();        
-        upButton.reset();        
+      if(downButton.type()==PushButton::LONG){
+        if(upButton.primed()){
+          ss->indicator->setVal(0);
+          ss->transmit(SOMFY_PROGRAM);
+          downButton.wait();
+          downButton.reset();        
+          upButton.wait();        
+          upButton.reset();
+        } else {
+          ss->target->setVal(0);
+          ss->indicator->setVal(0);
+          ss->lowerTime=120000;
+          ss->update();
+          LOG1("** Preparing to Reset Lower Time\n");
+          ss->recalibrate=true;
+          downButton.wait();
+          downButton.reset();
+        }
+       
       } else
 
       if(downButton.type()==PushButton::SINGLE && ss->target->getVal()>0){
@@ -271,13 +297,32 @@ struct DEV_Somfy : Service::WindowCovering {
       
       if(myButton.type()==PushButton::SINGLE && ss->velocity!=0){
         ss->indicator->setVal(0);
-        int estimatedPosition=ss->current->getVal<double>()+ss->velocity*double(millis()-ss->startTime);
-        if(estimatedPosition>100)
-          estimatedPosition=100;
-        else if(estimatedPosition<0)
-          estimatedPosition=0;
-        ss->target->setVal(estimatedPosition);
-        ss->loop();
+
+        if(ss->recalibrate){
+          if(ss->velocity>0){         
+            ss->velocity=1;
+            ss->raiseTime=millis()-ss->startTime;
+            LOG1("** Reset Raise Time to ");
+            LOG1(ss->raiseTime);
+            LOG1("\n");
+          } else {
+            ss->velocity=-11;
+            ss->lowerTime=millis()-ss->startTime;            
+            LOG1("** Reset Lower Time to ");
+            LOG1(ss->lowerTime);
+            LOG1("\n");
+          }
+          ss->recalibrate=false;
+          
+        } else {
+        
+          int estimatedPosition=ss->current->getVal<double>()+ss->velocity*double(millis()-ss->startTime);
+          if(estimatedPosition>100)
+            estimatedPosition=100;
+          else if(estimatedPosition<0)
+            estimatedPosition=0;
+          ss->target->setVal(estimatedPosition);
+        }        
       }
     }
 
