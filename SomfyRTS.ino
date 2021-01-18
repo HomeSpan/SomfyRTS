@@ -25,6 +25,10 @@
  *  
  ********************************************************************************/
 
+// Define Somfy address channel block for this device (must be unique across devices)
+
+#define SOMFY_BLOCK  5
+
 // Assign pins for the physical Somfy pushbuttons
 // A LONG press of the MY_BUTTON serves as the HomeSpan Control Button
 // A DOUBLE press of the MY_BUTTON serve as Shade Selector
@@ -54,17 +58,16 @@ void setup() {
   homeSpan.setLogLevel(1);
   homeSpan.setControlPin(MY_BUTTON);
 
-  homeSpan.begin(Category::Bridges,"Somfy-HomeSpan");
+  homeSpan.begin(Category::WindowCoverings,"Somfy-HomeSpan");
 
-  DEV_Somfy::init();
+  DEV_Somfy::init(SOMFY_BLOCK);
 
-  new SpanAccessory(1);  
-    new DEV_Identify("Somfy Controller","HomeSpan","123-ABC","Multi-Channel RTS",SKETCH_VERSION,3);
-    new Service::HAPProtocolInformation();
-      new Characteristic::Version("1.1.0");
+  DEV_Somfy::create(1,"Screen Door",8000,7000);
+  DEV_Somfy::create(2,"Shade-1");
+  DEV_Somfy::create(3,"Shade-2");
+  DEV_Somfy::create(4,"Shade-4");
+  DEV_Somfy::create(5,"Shade-5",4000,3000);
 
-  CREATE_CHANNEL(1,21000,19000);          // add Somfy Channel #1 with raiseTime=21000 ms and lowerTime=19000ms
-     
 } // end of setup()
 
 //////////////////////////////////////
