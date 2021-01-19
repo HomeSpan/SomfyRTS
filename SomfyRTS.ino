@@ -27,7 +27,7 @@
 
 // Define Somfy address channel block for this device (must be unique across devices)
 
-#define SOMFY_BLOCK  5
+#define SOMFY_BLOCK  0
 
 // Assign pins for the physical Somfy pushbuttons
 // A LONG press of the MY_BUTTON serves as the HomeSpan Control Button
