@@ -1,7 +1,7 @@
 /*********************************************************************************
  *  MIT License
  *  
- *  Copyright (c) 2020 Gregg E. Berman
+ *  Copyright (c) 2020-2021 Gregg E. Berman
  *  
  *  https://github.com/HomeSpan/SomfyRTS
  *  
@@ -45,7 +45,7 @@
 #define RFM_RESET_PIN     27      // this is the pin used to reset the RFM.  MUST be connected to the RESET pin on the RFM69
 
 #define SKETCH_VERSION  "1.1.0"       // version of the Homespan SomfyRTS sketch
-#define REQUIRED VERSION(1,1,2)       // required version of the HomeSpan Library
+#define REQUIRED VERSION(1,3,0)       // required version of the HomeSpan Library
 
 #include "HomeSpan.h" 
 #include "DEV_Identify.h"       

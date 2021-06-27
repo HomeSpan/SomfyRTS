@@ -381,14 +381,14 @@ struct DEV_Somfy : Service::WindowCovering {
 
 ////////////////////////////////////
 
-#define CREATE_CHANNEL(channelNum,raiseTime,lowerTime) { \
-  uint32_t address=DEV_Somfy::createAddress(channelNum); \
-  char *displayName=DEV_Somfy::createName(DISPLAY_NAME_FORMAT,channelNum); \
-  char *displayAddress=DEV_Somfy::createName(DISPLAY_ADDRESS_FORMAT,address); \  
-  new SpanAccessory(channelNum+1); \
-  new DEV_Identify(displayName, "HomeSpan", displayAddress, displayName, SKETCH_VERSION, 0); \
-  new DEV_Somfy(address,displayName,displayAddress,raiseTime,lowerTime); \
-}
+//#define CREATE_CHANNEL(channelNum,raiseTime,lowerTime) { \
+//  uint32_t address=DEV_Somfy::createAddress(channelNum); \
+//  char *displayName=DEV_Somfy::createName(DISPLAY_NAME_FORMAT,channelNum); \
+//  char *displayAddress=DEV_Somfy::createName(DISPLAY_ADDRESS_FORMAT,address); \  
+//  new SpanAccessory(channelNum+1); \
+//  new DEV_Identify(displayName, "HomeSpan", displayAddress, displayName, SKETCH_VERSION, 0); \
+//  new DEV_Somfy(address,displayName,displayAddress,raiseTime,lowerTime); \
+//}
 
 ////////////////////////////////////
 
