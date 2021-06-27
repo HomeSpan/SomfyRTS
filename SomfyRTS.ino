@@ -58,6 +58,8 @@ void setup() {
   homeSpan.setLogLevel(1);
   homeSpan.setControlPin(MY_BUTTON);
 
+  new SpanUserCommand('D',"- delete Somfy Shade data and Restart",SomfyShade::deleteData);
+
   homeSpan.begin(Category::WindowCoverings,"Somfy-HomeSpan");
 
   new SomfyShade(1,"Screen Door",8000,7000);

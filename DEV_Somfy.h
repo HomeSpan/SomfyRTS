@@ -382,6 +382,14 @@ struct SomfyShade{
     DEV_Somfy::poll();
   }
 
+  static void deleteData(const char *s){
+    nvs_erase_all(somfyNVS);
+    nvs_commit(somfyNVS);      
+    Serial.print("\n*** All Somfy Data ERASED!  Re-starting...\n\n");
+    delay(1000);
+    ESP.restart();                                                                             // re-start device     
+  }
+
 };
 
 //////////////////////////////////////
