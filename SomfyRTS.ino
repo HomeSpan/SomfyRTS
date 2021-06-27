@@ -27,7 +27,7 @@
 
 // Define Somfy 19-bit address for this device (must be unique across devices)
 
-#define SOMFY_ADDRESS  0x7FFFF              // 0x0000 through 0x7FFFF
+#define SOMFY_ADDRESS  0x1000              // 0x0000 through 0x7FFFF
 
 // Assign pins for the physical Somfy pushbuttons
 // A LONG press of the MY_BUTTON serves as the HomeSpan Control Button
@@ -62,6 +62,7 @@ void setup() {
 
   new SomfyShade(1,"Screen Door",8000,7000);
   new SomfyShade(2,"Shade-1");
+  new SomfyShade(9,"Shade-9");
 
 } // end of setup()
 

@@ -61,8 +61,8 @@ struct DEV_Somfy : Service::WindowCovering {
     address=(SOMFY_ADDRESS & 0x7FFFF)*32+channel; // Somfy address for this channel
     sChannel=channel_s;                           // string name for this channel used to index NVS and display as model
     
-    current=new Characteristic::CurrentPosition(0);         // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)    
-    target=new Characteristic::TargetPosition(0);           // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)
+    current=new Characteristic::CurrentPosition(0,true);    // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)    
+    target=new Characteristic::TargetPosition(0,true);      // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)
     indicator=new Characteristic::ObstructionDetected(0);   // use this as a flag to indicate to user that this channel has been selected
 
     size_t len;
@@ -73,8 +73,7 @@ struct DEV_Somfy : Service::WindowCovering {
       nvs_commit(somfyNVS);                                               // commit to NVS
     }
        
-    sprintf(cBuf,"Configuring Somfy Window Shade %s:  RollingCode=%04X  RaiseTime=%d ms  LowerTime=%d ms\n",sChannel,shadeData.rollingCode,shadeData.raiseTime,shadeData.lowerTime);
-    Serial.print(cBuf);
+    Serial.printf("Configuring Somfy Window Shade %s:  Address=%06X  RollingCode=%04X  RaiseTime=%d ms  LowerTime=%d ms\n",sChannel,address,shadeData.rollingCode,shadeData.raiseTime,shadeData.lowerTime);
 
     shadeList.push_back(this);
 
@@ -360,20 +359,18 @@ struct SomfyShade{
     }
     
     if(channel<1 || channel>32){
-      sprintf(cBuf,"\n*** WARNING.  Channel number %d is out of range [1-32].  Cannot create '%s'!\n\n",channel,name);
-      Serial.print(cBuf);
+      Serial.printf("\n*** WARNING.  Channel number %d is out of range [1-32].  Cannot create '%s'!\n\n",channel,name);
       return;
     }
 
-//    if(!shadeList.empty()){
-//      for(int i=0;i<shadeList.size();i++){
-//        if(channel==shadeList[i]->channel){
-//          sprintf(cBuf,"\n*** WARNING.  Channel number %d already used.  Cannot create '%s'!\n\n",channel,name);
-//          Serial.print(cBuf);      
-//          return;
-//        }
-//      }
-//    }
+    if(!DEV_Somfy::shadeList.empty()){
+      for(int i=0;i<DEV_Somfy::shadeList.size();i++){
+        if(channel==DEV_Somfy::shadeList[i]->channel){
+          Serial.printf("\n*** WARNING.  Channel number %d already used.  Cannot create '%s'!\n\n",channel,name);
+          return;
+        }
+      }
+    }
 
     sprintf(channel_s,"CH-%02d",channel);  
     new SpanAccessory(channel+1);
