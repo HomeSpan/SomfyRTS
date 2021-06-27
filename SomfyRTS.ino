@@ -25,18 +25,18 @@
  *  
  ********************************************************************************/
 
-// Define Somfy address channel block for this device (must be unique across devices)
+// Define Somfy 19-bit address for this device (must be unique across devices)
 
-#define SOMFY_BLOCK  0
+#define SOMFY_ADDRESS  0x7FFFF              // 0x0000 through 0x7FFFF
 
 // Assign pins for the physical Somfy pushbuttons
 // A LONG press of the MY_BUTTON serves as the HomeSpan Control Button
 // A DOUBLE press of the MY_BUTTON serve as Shade Selector
 // A simultaneous LONG press of both the UP and DOWN Buttons serve as the Somfy PROG Button
 
-#define UP_BUTTON     16         
+#define DOWN_BUTTON   16         
 #define MY_BUTTON     22  
-#define DOWN_BUTTON   25
+#define UP_BUTTON     25
 
 // Assign pins for RFM69 Transceiver
 
@@ -60,13 +60,8 @@ void setup() {
 
   homeSpan.begin(Category::WindowCoverings,"Somfy-HomeSpan");
 
-  DEV_Somfy::init(SOMFY_BLOCK);
-
-  DEV_Somfy::create(1,"Screen Door",8000,7000);
-  DEV_Somfy::create(2,"Shade-1");
-  DEV_Somfy::create(3,"Shade-2");
-  DEV_Somfy::create(4,"Shade-4");
-  DEV_Somfy::create(5,"Shade-5",4000,3000);
+  new SomfyShade(1,"Screen Door",8000,7000);
+  new SomfyShade(2,"Shade-1");
 
 } // end of setup()
 
@@ -75,6 +70,8 @@ void setup() {
 void loop(){
   
   homeSpan.poll();
-  DEV_Somfy::poll();
+  SomfyShade::poll();
   
 } // end of loop()
+
+//////////////////////////////////////

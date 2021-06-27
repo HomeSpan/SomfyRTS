@@ -24,6 +24,8 @@ const char *label[]={"STOPPING","RAISING","LOWERING","PROGRAMMING"};
 
 RFControl rf(RFM_SIGNAL_PIN);
 RFM69 rfm69(RFM_CHIP_SELECT,RFM_RESET_PIN);
+nvs_handle somfyNVS;
+char serialNum[32];
 
 //////////////////////////////////////
 
@@ -36,7 +38,7 @@ struct DEV_Somfy : Service::WindowCovering {
   double velocity=0;
   uint32_t startTime=0;
   boolean recalibrate=false;
-  char sChannel[6];
+  char *sChannel;
   uint8_t channel;
   uint32_t address;
 
@@ -48,18 +50,16 @@ struct DEV_Somfy : Service::WindowCovering {
 
   static vector<DEV_Somfy *> shadeList;     // store a list of all shades so we can scroll through selection with progButton
   static int selectedShade;                 // selected shade in shadeList
-  static nvs_handle somfyNVS;               // handle to NVS to store rolling codes and hashKey for addresses
-  static char serialNum[32];                // serial number for this device (based on SOMFY_BLOCK)
   
 //////////////////////////////////////
   
-  DEV_Somfy(uint8_t channel, uint32_t raiseTime=10000, uint32_t lowerTime=10000) : Service::WindowCovering(){       // constructor() method
+  DEV_Somfy(uint8_t channel, char *channel_s, uint32_t raiseTime=10000, uint32_t lowerTime=10000) : Service::WindowCovering(){       // constructor() method
 
-    this->channel=channel;                    // channel number (1-40)
-    shadeData.raiseTime=raiseTime;            // time (in milliseconds) to fully open
-    shadeData.lowerTime=lowerTime;            // time (in milliseconds) to fully close
-    address=SOMFY_BLOCK*40+channel;           // Somfy address for this channel
-    sprintf(sChannel,"CH-%02d",channel);      // string name for this channel used to index NVS
+    this->channel=channel;                        // channel number (1-32)
+    shadeData.raiseTime=raiseTime;                // time (in milliseconds) to fully open
+    shadeData.lowerTime=lowerTime;                // time (in milliseconds) to fully close
+    address=(SOMFY_ADDRESS & 0x7FFFF)*32+channel; // Somfy address for this channel
+    sChannel=channel_s;                           // string name for this channel used to index NVS and display as model
     
     current=new Characteristic::CurrentPosition(0);         // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)    
     target=new Characteristic::TargetPosition(0);           // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)
@@ -336,63 +336,58 @@ struct DEV_Somfy : Service::WindowCovering {
   } // poll
   
 ////////////////////////////////////
-
-  static void init(int block){
-    nvs_open("SOMFY_DATA",NVS_READWRITE,&somfyNVS);
-    rfm69.init();
-    rfm69.setFrequency(RF_FREQUENCY);
-    sprintf(serialNum,"SBLOCK-%04d",block);
-
-    new SpanAccessory(1);  
-      new DEV_Identify("SomfyPlus","HomeSpan",serialNum,"40-Channel RTS",SKETCH_VERSION,3);
-      new Service::HAPProtocolInformation();
-        new Characteristic::Version("1.1.0");
     
-  } // init
-  
-////////////////////////////////////
-
-  static void create(uint8_t channel, char *name, uint32_t raiseTime=10000, uint32_t lowerTime=10000){
-    if(channel<1 || channel>40){
-      sprintf(cBuf,"\n*** WARNING.  Channel number %d is out of range [1-40].  Cannot create '%s'!\n\n",channel,name);
-      Serial.print(cBuf);
-      return;
-    }
-
-  if(!shadeList.empty()){
-    for(int i=0;i<shadeList.size();i++){
-      if(channel==shadeList[i]->channel){
-        sprintf(cBuf,"\n*** WARNING.  Channel number %d already used.  Cannot create '%s'!\n\n",channel,name);
-        Serial.print(cBuf);      
-        return;
-      }
-    }
-  }
-
-  new SpanAccessory(channel+1);
-  new DEV_Identify(name,"HomeSpan",serialNum,"SomfyPlus",SKETCH_VERSION,0);
-  new DEV_Somfy(channel,raiseTime,lowerTime);
-    
-  } // create
-  
-////////////////////////////////////
-
 }; // DEV_Somfy()
 
 ////////////////////////////////////
 
-//#define CREATE_CHANNEL(channelNum,raiseTime,lowerTime) { \
-//  uint32_t address=DEV_Somfy::createAddress(channelNum); \
-//  char *displayName=DEV_Somfy::createName(DISPLAY_NAME_FORMAT,channelNum); \
-//  char *displayAddress=DEV_Somfy::createName(DISPLAY_ADDRESS_FORMAT,address); \  
-//  new SpanAccessory(channelNum+1); \
-//  new DEV_Identify(displayName, "HomeSpan", displayAddress, displayName, SKETCH_VERSION, 0); \
-//  new DEV_Somfy(address,displayName,displayAddress,raiseTime,lowerTime); \
-//}
+struct SomfyShade{
+  char channel_s[6];
 
-////////////////////////////////////
+  SomfyShade(uint8_t channel, char *name, uint32_t raiseTime=10000, uint32_t lowerTime=10000){
+
+    if(!somfyNVS){
+      nvs_open("SOMFY_DATA",NVS_READWRITE,&somfyNVS);
+      rfm69.init();
+      rfm69.setFrequency(RF_FREQUENCY);
+      sprintf(serialNum,"SMF-%05X",SOMFY_ADDRESS & 0x7FFFF);
+      Serial.printf("Somfy+ Serial Number: %s\n",serialNum);
+
+      new SpanAccessory(1);  
+      new DEV_Identify("SomfyPlus","HomeSpan",serialNum,"32-Channel RTS",SKETCH_VERSION,3);
+      new Service::HAPProtocolInformation();
+      new Characteristic::Version("1.1.0");
+    }
+    
+    if(channel<1 || channel>32){
+      sprintf(cBuf,"\n*** WARNING.  Channel number %d is out of range [1-32].  Cannot create '%s'!\n\n",channel,name);
+      Serial.print(cBuf);
+      return;
+    }
+
+//    if(!shadeList.empty()){
+//      for(int i=0;i<shadeList.size();i++){
+//        if(channel==shadeList[i]->channel){
+//          sprintf(cBuf,"\n*** WARNING.  Channel number %d already used.  Cannot create '%s'!\n\n",channel,name);
+//          Serial.print(cBuf);      
+//          return;
+//        }
+//      }
+//    }
+
+    sprintf(channel_s,"CH-%02d",channel);  
+    new SpanAccessory(channel+1);
+    new DEV_Identify(name,"HomeSpan",channel_s,"Somfy+",SKETCH_VERSION,0);
+    new DEV_Somfy(channel,channel_s,raiseTime,lowerTime);
+  }
+
+  static void poll(){
+    DEV_Somfy::poll();
+  }
+
+};
+
+//////////////////////////////////////
 
 vector<DEV_Somfy *> DEV_Somfy::shadeList;
 int DEV_Somfy::selectedShade=0;
-nvs_handle DEV_Somfy::somfyNVS;
-char DEV_Somfy::serialNum[32];
