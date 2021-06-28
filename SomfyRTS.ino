@@ -1,7 +1,7 @@
 /*********************************************************************************
  *  MIT License
  *  
- *  Copyright (c) 2020 Gregg E. Berman
+ *  Copyright (c) 2020-2021 Gregg E. Berman
  *  
  *  https://github.com/HomeSpan/SomfyRTS
  *  
@@ -25,12 +25,18 @@
  *  
  ********************************************************************************/
 
-// Assign pins for the physical Somfy pushbuttons
+// Define Somfy 19-bit address for this device (must be unique across devices)
 
-#define PROG_BUTTON   17      // must have a button to enable programming remote
-#define UP_BUTTON     26      // button is optional
-#define MY_BUTTON     25      // button is optional
-#define DOWN_BUTTON   23      // button is optional
+#define SOMFY_ADDRESS  0x1000              // 0x0000 through 0x7FFFF
+
+// Assign pins for the physical Somfy pushbuttons
+// A LONG press of the MY_BUTTON serves as the HomeSpan Control Button
+// A DOUBLE press of the MY_BUTTON serve as Shade Selector
+// A simultaneous LONG press of both the UP and DOWN Buttons serve as the Somfy PROG Button
+
+#define DOWN_BUTTON   16         
+#define MY_BUTTON     22  
+#define UP_BUTTON     25
 
 // Assign pins for RFM69 Transceiver
 
@@ -38,8 +44,8 @@
 #define RFM_CHIP_SELECT   33      // this is the pin used for SPI control.  MUST be connected to the SPI Chip Select pin on the RFM69
 #define RFM_RESET_PIN     27      // this is the pin used to reset the RFM.  MUST be connected to the RESET pin on the RFM69
 
-#define SKETCH_VERSION  "1.0.1"       // version of the Homespan SomfyRTS sketch
-#define REQUIRED VERSION(1,1,2)       // required version of the HomeSpan Library
+#define SKETCH_VERSION  "2.0.0"       // version of the Homespan SomfyRTS sketch
+#define REQUIRED VERSION(1,3,0)       // required version of the HomeSpan Library
 
 #include "HomeSpan.h" 
 #include "DEV_Identify.h"       
@@ -50,18 +56,16 @@ void setup() {
   Serial.begin(115200);
 
   homeSpan.setLogLevel(1);
+  homeSpan.setControlPin(MY_BUTTON);
+  homeSpan.enableOTA();
+  homeSpan.setSketchVersion(SKETCH_VERSION);
+  
+  new SpanUserCommand('D',"- delete Somfy Shade data and Restart",SomfyShade::deleteData);
 
-  homeSpan.begin(Category::Bridges,"Somfy-HomeSpan");
+  homeSpan.begin(Category::WindowCoverings,"Somfy-HomeSpan");
 
-  DEV_Somfy::init();
+  new SomfyShade(1,"Screen Door");
 
-  new SpanAccessory(1);  
-    new DEV_Identify("Somfy Controller","HomeSpan","123-ABC","Multi-Channel RTS",SKETCH_VERSION,3);
-    new Service::HAPProtocolInformation();
-      new Characteristic::Version("1.1.0");
-
-  CREATE_CHANNEL(1,21000,19000);          // add Somfy Channel #1 with raiseTime=21000 ms and lowerTime=19000ms
-     
 } // end of setup()
 
 //////////////////////////////////////
@@ -69,6 +73,8 @@ void setup() {
 void loop(){
   
   homeSpan.poll();
-  DEV_Somfy::poll();
+  SomfyShade::poll();
   
 } // end of loop()
+
+//////////////////////////////////////

@@ -5,12 +5,10 @@
 
 #include "extras/RFControl.h"
 #include "RFM69.h"
-#include <sodium.h>
 #include <nvs_flash.h>
 
 char cBuf[128];                       // general string buffer for formatting output when needed
 
-PushButton progButton(PROG_BUTTON);
 PushButton upButton(UP_BUTTON);
 PushButton myButton(MY_BUTTON);
 PushButton downButton(DOWN_BUTTON);
@@ -22,13 +20,12 @@ PushButton downButton(DOWN_BUTTON);
 #define SOMFY_LOWER   2
 #define SOMFY_PROGRAM 3
 
-#define DISPLAY_NAME_FORMAT      "Channel-%lu"
-#define DISPLAY_ADDRESS_FORMAT   "RTS-%06X"
-
 const char *label[]={"STOPPING","RAISING","LOWERING","PROGRAMMING"};
 
 RFControl rf(RFM_SIGNAL_PIN);
 RFM69 rfm69(RFM_CHIP_SELECT,RFM_RESET_PIN);
+nvs_handle somfyNVS;
+char serialNum[32];
 
 //////////////////////////////////////
 
@@ -40,37 +37,43 @@ struct DEV_Somfy : Service::WindowCovering {
    
   double velocity=0;
   uint32_t startTime=0;
-  uint32_t raiseTime;
-  uint32_t lowerTime;
+  boolean recalibrate=false;
+  char *sChannel;
+  uint8_t channel;
   uint32_t address;
-  char *sName;
-  char *sAddr;
-  uint16_t rollingCode=0xFF;                   // arbitrary starting code
 
-  static vector<DEV_Somfy *> shadeList;        // store a list of all shades so we can scroll through selection with progButton
-  static int selectedShade;                    // selected shade in shadeList
-  static unsigned char hashKey[16];            // key for hashing channel numbers into Somfy addresses
-  static nvs_handle somfyNVS;                  // handle to NVS to store rolling codes and hashKey for addresses
+  struct ShadeData {
+    uint16_t rollingCode=0xFF;           // arbitrary starting code
+    uint32_t raiseTime;                  // time to raise shade from fully closed to fully open (in milliseconds)
+    uint32_t lowerTime;                  // time to lower shade from fully open to fully closed (in milliseconds)
+  } shadeData;
 
+  static vector<DEV_Somfy *> shadeList;     // store a list of all shades so we can scroll through selection with progButton
+  static int selectedShade;                 // selected shade in shadeList
+  
 //////////////////////////////////////
   
-  DEV_Somfy(uint32_t address, char *displayName, char *displayAddress, uint32_t raiseTime, uint32_t lowerTime) : Service::WindowCovering(){       // constructor() method
+  DEV_Somfy(uint8_t channel, char *channel_s, uint32_t raiseTime=10000, uint32_t lowerTime=10000) : Service::WindowCovering(){       // constructor() method
 
-    this->address=address;                             // Somfy address (only lower 3 bytes)
-    this->raiseTime=raiseTime;                         // time (in milliseconds) to fully open
-    this->lowerTime=lowerTime;                         // time (in milliseconds) to fully close
-    current=new Characteristic::CurrentPosition(0);    // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)    
-    target=new Characteristic::TargetPosition(0);      // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)
+    this->channel=channel;                        // channel number (1-32)
+    shadeData.raiseTime=raiseTime;                // time (in milliseconds) to fully open
+    shadeData.lowerTime=lowerTime;                // time (in milliseconds) to fully close
+    address=(SOMFY_ADDRESS & 0x7FFFF)*32+channel; // Somfy address for this channel
+    sChannel=channel_s;                           // string name for this channel used to index NVS and display as model
     
-    indicator=new Characteristic::ObstructionDetected(0);     // use this as a flag to indicate to user that this channel has been selected
+    current=new Characteristic::CurrentPosition(0,true);    // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)    
+    target=new Characteristic::TargetPosition(0,true);      // Windows Shades have positions that range from 0 (fully lowered) to 100 (fully raised)
+    indicator=new Characteristic::ObstructionDetected(0);   // use this as a flag to indicate to user that this channel has been selected
 
-    sAddr=displayAddress;
-    sName=displayName;
-    
-    nvs_get_u16(somfyNVS,sAddr,&rollingCode);          // get rolling code for this Somfy address, if it exists (otherwise initialized value above is used)
-   
-    sprintf(cBuf,"Configuring Somfy Window Shade %s (%s):  RollingCode=%04X  RaiseTime=%d ms  LowerTime=%d ms\n",sName,sAddr,rollingCode,this->raiseTime,this->lowerTime);
-    Serial.print(cBuf);
+    size_t len;
+    if(!nvs_get_blob(somfyNVS,sChannel,NULL,&len)){                       // if found data for this channel in NVS
+      nvs_get_blob(somfyNVS,sChannel,&shadeData,&len);                    // retrieve data
+    } else {
+      nvs_set_blob(somfyNVS,sChannel,&shadeData,sizeof(ShadeData));       // save data
+      nvs_commit(somfyNVS);                                               // commit to NVS
+    }
+       
+    Serial.printf("Configuring Somfy Window Shade %s:  Address=%06X  RollingCode=%04X  RaiseTime=%d ms  LowerTime=%d ms\n",sChannel,address,shadeData.rollingCode,shadeData.raiseTime,shadeData.lowerTime);
 
     shadeList.push_back(this);
 
@@ -95,7 +98,7 @@ struct DEV_Somfy : Service::WindowCovering {
       if(velocity<0)
         current->setVal(estimatedPosition);
         
-      velocity=100.0/raiseTime;
+      velocity=100.0/shadeData.raiseTime;
       startTime=millis();
       
     } else
@@ -107,7 +110,7 @@ struct DEV_Somfy : Service::WindowCovering {
       if(velocity>0)
         current->setVal(estimatedPosition);
         
-      velocity=-100.0/lowerTime;
+      velocity=-100.0/shadeData.lowerTime;
       startTime=millis();
     }
         
@@ -134,10 +137,10 @@ struct DEV_Somfy : Service::WindowCovering {
     if((velocity>0 && estimatedPosition > targetPosition) || (velocity<0 && estimatedPosition < targetPosition)){
 
       if(targetPosition>100){
-        sprintf(cBuf,"** Somfy %s: Fully Open\n",sName);
+        sprintf(cBuf,"** Somfy %s: Fully Open\n",sChannel);
         LOG1(cBuf);
       } else if(targetPosition<0){
-        sprintf(cBuf,"** Somfy %s: Fully Closed\n",sName);
+        sprintf(cBuf,"** Somfy %s: Fully Closed\n",sChannel);
         LOG1(cBuf);
       } else {
         transmit(SOMFY_STOP);
@@ -145,6 +148,7 @@ struct DEV_Somfy : Service::WindowCovering {
       
       current->setVal(target->getVal());
       velocity=0;
+      recalibrate=false;
     }
     
   } // loop
@@ -156,15 +160,15 @@ struct DEV_Somfy : Service::WindowCovering {
     rfm69.setRegister(0x01,0x0c);           // enable transmission mode
     delay(10);
   
-    sprintf(cBuf,"** Somfy %s: %s  RC=%04X\n",sName,label[action],++rollingCode);
+    sprintf(cBuf,"** Somfy %s: %s  RC=%04X\n",sChannel,label[action],++shadeData.rollingCode);
     LOG1(cBuf);
 
     uint8_t b[7];
   
     b[0]=0xA0;
     b[1]=1<<(4+action);
-    b[2]=rollingCode >> 8;
-    b[3]=rollingCode & 0xFF;
+    b[2]=shadeData.rollingCode >> 8;
+    b[3]=shadeData.rollingCode & 0xFF;
     b[4]=(address >> 16) & 0xFF;
     b[5]=(address >> 8) & 0xFF;
     b[6]=(address) & 0xFF;
@@ -177,13 +181,13 @@ struct DEV_Somfy : Service::WindowCovering {
   
     char c[64];
     sprintf(c,"Transmitting: %02X %02X %02X %02X %02X %02X %02X\n",b[0],b[1],b[2],b[3],b[4],b[5],b[6]);
-    LOG2(c);
+    LOG1(c);
   
     for(int i=1;i<7;i++)
       b[i] ^= b[i-1];
   
     sprintf(c,"Obfuscated:   %02X %02X %02X %02X %02X %02X %02X\n",b[0],b[1],b[2],b[3],b[4],b[5],b[6]);
-    LOG2(c);
+    LOG1(c);
   
     rf.clear();
     
@@ -209,7 +213,8 @@ struct DEV_Somfy : Service::WindowCovering {
 
     rfm69.setRegister(0x01,0x04);                 // re-enter stand-by mode
 
-    nvs_set_u16(somfyNVS,sAddr,rollingCode);      // save updated rolling
+    nvs_set_blob(somfyNVS,sChannel,&shadeData,sizeof(ShadeData));       // save data
+    nvs_commit(somfyNVS);                                               // commit to NVS
        
   } // transmit
 
@@ -219,112 +224,175 @@ struct DEV_Somfy : Service::WindowCovering {
 
     DEV_Somfy *ss=shadeList[selectedShade];
 
-    if(progButton.triggered(5,4000)){
-     
-      if(progButton.type()==PushButton::SINGLE){
+    if(upButton.triggered(5,2000,200)){
+      
+      if(upButton.type()==PushButton::LONG){
+        if(downButton.primed()){
+          ss->indicator->setVal(0);
+          ss->transmit(SOMFY_PROGRAM);
+          downButton.wait();
+          downButton.reset();        
+          upButton.wait();        
+          upButton.reset();
+        } else {
+          ss->target->setVal(100);
+          ss->indicator->setVal(0);
+          ss->shadeData.raiseTime=120000;
+          ss->update();
+          LOG1("** Preparing to Reset Raise Time\n");
+          ss->recalibrate=true;
+          upButton.wait();
+          upButton.reset();
+        }
+        
+      } else
+
+      if(upButton.type()==PushButton::SINGLE && ss->target->getVal()<100){
+        ss->target->setVal(100);
+        ss->indicator->setVal(0);
+        ss->update();
+      }
+
+    } else
+
+    if(downButton.triggered(5,2000,200)){
+      
+      if(downButton.type()==PushButton::LONG){
+        if(upButton.primed()){
+          ss->indicator->setVal(0);
+          ss->transmit(SOMFY_PROGRAM);
+          downButton.wait();
+          downButton.reset();        
+          upButton.wait();        
+          upButton.reset();
+        } else {
+          ss->target->setVal(0);
+          ss->indicator->setVal(0);
+          ss->shadeData.lowerTime=120000;
+          ss->update();
+          LOG1("** Preparing to Reset Lower Time\n");
+          ss->recalibrate=true;
+          downButton.wait();
+          downButton.reset();
+        }
+       
+      } else
+
+      if(downButton.type()==PushButton::SINGLE && ss->target->getVal()>0){
+        ss->target->setVal(0);
+        ss->indicator->setVal(0);
+        ss->update();
+      }
+      
+    } else
+
+    if(myButton.triggered(5,1000,200)){
+      if(myButton.type()==PushButton::DOUBLE){
         if(ss->indicator->getVal()){
           ss->indicator->setVal(0);
           selectedShade=(selectedShade+1)%shadeList.size();
           ss=shadeList[selectedShade];
         }
         ss->indicator->setVal(1);
-        sprintf(cBuf,"** Somfy %s: Selected\n",ss->sName);
+        sprintf(cBuf,"** Somfy %s: Selected\n",ss->sChannel);
         LOG1(cBuf);
-        return;        
-      } // Single Press
+        
+      } else
       
-      if(progButton.type()==PushButton::LONG){
+      if(myButton.type()==PushButton::SINGLE && ss->velocity!=0){
         ss->indicator->setVal(0);
-        ss->transmit(SOMFY_PROGRAM);
-        return;        
-      } // Long Press
 
-    } // progButton
-
-    if(upButton.triggered(5,1000) && upButton.type()==PushButton::SINGLE && ss->target->getVal()<100){
-      ss->target->setVal(100);
-      ss->indicator->setVal(0);
-      ss->update();
-    } else
-
-    if(downButton.triggered(5,1000) && downButton.type()==PushButton::SINGLE && ss->target->getVal()>0){
-      ss->target->setVal(0);
-      ss->indicator->setVal(0);
-      ss->update();
-    } else
-
-    if(myButton.triggered(5,1000) && downButton.type()==PushButton::SINGLE && ss->velocity!=0){
-      ss->indicator->setVal(0);
-      int estimatedPosition=ss->current->getVal<double>()+ss->velocity*double(millis()-ss->startTime);
-      if(estimatedPosition>100)
-        estimatedPosition=100;
-      else if(estimatedPosition<0)
-        estimatedPosition=0;
-      ss->target->setVal(estimatedPosition);
-      ss->loop();
+        if(ss->recalibrate){
+          if(ss->velocity>0){         
+            ss->velocity=1;
+            ss->shadeData.raiseTime=millis()-ss->startTime;
+            LOG1("** Reset Raise Time to ");
+            LOG1(ss->shadeData.raiseTime);
+            LOG1("\n");
+          } else {
+            ss->velocity=-1;
+            ss->shadeData.lowerTime=millis()-ss->startTime;            
+            LOG1("** Reset Lower Time to ");
+            LOG1(ss->shadeData.lowerTime);
+            LOG1("\n");
+          }
+          ss->recalibrate=false;
+          nvs_set_blob(somfyNVS,ss->sChannel,&(ss->shadeData),sizeof(ShadeData));       // save data
+          nvs_commit(somfyNVS);                                                         // commit to NVS
+          
+        } else {
+        
+          int estimatedPosition=ss->current->getVal<double>()+ss->velocity*double(millis()-ss->startTime);
+          if(estimatedPosition>100)
+            estimatedPosition=100;
+          else if(estimatedPosition<0)
+            estimatedPosition=0;
+          ss->target->setVal(estimatedPosition);
+        }        
+      }
     }
 
   } // poll
   
 ////////////////////////////////////
-
-  static void init(){
-    nvs_open("SOMFY_DATA",NVS_READWRITE,&somfyNVS);
-
-    size_t len;
     
-    if(!nvs_get_blob(somfyNVS,"HASHKEY",NULL,&len)){       // if found HASH KEY for Somfy addresses
-      nvs_get_blob(somfyNVS,"HASHKEY",hashKey,&len);       // retrieve HASH KEY
-    } else {
-      Serial.print("Creating new Hash Key for Somfy Controller Addresses\n");
-      crypto_shorthash_keygen(hashKey);
-      nvs_set_blob(somfyNVS,"HASHKEY",hashKey,sizeof(hashKey));
-      nvs_commit(somfyNVS);
-    }   
-
-    rfm69.init();
-    rfm69.setFrequency(RF_FREQUENCY);
-    
-  } // init
-  
-////////////////////////////////////
-
-  static uint32_t createAddress(uint32_t channelNum){     // create a 3-byte Somfy RTS address from channel number
-
-  uint32_t code[2];
-  
-  crypto_shorthash((unsigned char *)&code, (unsigned char *)&channelNum, 4, hashKey);
-  return(code[0]&0xFFFFFF);
-  }
-
-////////////////////////////////////
-
-  static char *createName(char *format, uint32_t val){
-
-  int nChars=snprintf(NULL,0,format,val);
-  char *cBuf=(char *)malloc(nChars+1);
-  sprintf(cBuf,format,val);
-  return(cBuf);    
-  }
-
-////////////////////////////////////
-
 }; // DEV_Somfy()
 
 ////////////////////////////////////
 
-#define CREATE_CHANNEL(channelNum,raiseTime,lowerTime) { \
-  uint32_t address=DEV_Somfy::createAddress(channelNum); \
-  char *displayName=DEV_Somfy::createName(DISPLAY_NAME_FORMAT,channelNum); \
-  char *displayAddress=DEV_Somfy::createName(DISPLAY_ADDRESS_FORMAT,address); \  
-  new SpanAccessory(channelNum+1); \
-  new DEV_Identify(displayName, "HomeSpan", displayAddress, displayName, SKETCH_VERSION, 0); \
-  new DEV_Somfy(address,displayName,displayAddress,raiseTime,lowerTime); \
-}
+struct SomfyShade{
+  char channel_s[6];
 
-////////////////////////////////////
+  SomfyShade(uint8_t channel, char *name, uint32_t raiseTime=10000, uint32_t lowerTime=10000){
+
+    if(!somfyNVS){
+      nvs_open("SOMFY_DATA",NVS_READWRITE,&somfyNVS);
+      rfm69.init();
+      rfm69.setFrequency(RF_FREQUENCY);
+      sprintf(serialNum,"SMF-%05X",SOMFY_ADDRESS & 0x7FFFF);
+      Serial.printf("Somfy+ Serial Number: %s\n",serialNum);
+
+      new SpanAccessory(1);  
+      new DEV_Identify("SomfyPlus","HomeSpan",serialNum,"32-Channel RTS",SKETCH_VERSION,3);
+      new Service::HAPProtocolInformation();
+      new Characteristic::Version("1.1.0");
+    }
+    
+    if(channel<1 || channel>32){
+      Serial.printf("\n*** WARNING.  Channel number %d is out of range [1-32].  Cannot create '%s'!\n\n",channel,name);
+      return;
+    }
+
+    if(!DEV_Somfy::shadeList.empty()){
+      for(int i=0;i<DEV_Somfy::shadeList.size();i++){
+        if(channel==DEV_Somfy::shadeList[i]->channel){
+          Serial.printf("\n*** WARNING.  Channel number %d already used.  Cannot create '%s'!\n\n",channel,name);
+          return;
+        }
+      }
+    }
+
+    sprintf(channel_s,"CH-%02d",channel);  
+    new SpanAccessory(channel+1);
+    new DEV_Identify(name,"HomeSpan",channel_s,"Somfy+",SKETCH_VERSION,0);
+    new DEV_Somfy(channel,channel_s,raiseTime,lowerTime);
+  }
+
+  static void poll(){
+    DEV_Somfy::poll();
+  }
+
+  static void deleteData(const char *s){
+    nvs_erase_all(somfyNVS);
+    nvs_commit(somfyNVS);      
+    Serial.print("\n*** All Somfy Data ERASED!  Re-starting...\n\n");
+    delay(1000);
+    ESP.restart();                                                                             // re-start device     
+  }
+
+};
+
+//////////////////////////////////////
 
 vector<DEV_Somfy *> DEV_Somfy::shadeList;
 int DEV_Somfy::selectedShade=0;
-unsigned char DEV_Somfy::hashKey[16];
-nvs_handle DEV_Somfy::somfyNVS;
