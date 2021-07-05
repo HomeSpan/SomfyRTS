@@ -1,4 +1,9 @@
 # SomfyRTS
+
+THIS HOMESPAN PROJECT HAS BEEN REPLACED BY A MORE ROBUST VERSION: [SOMFYPLUS](https://github.com/HomeSpan/SomfyPlus)
+
+---
+
 A universal, multi-channel, HomeKit Controller for Somfy RTS Motorized Window Shades and Patio Screens. Runs on an ESP32 device as an Arduino sketch using the Arduino [HomeSpan Library](https://github.com/HomeSpan/HomeSpan).
 
 Hardware used for this project:
